@@ -1,0 +1,55 @@
+{
+    "maps": [
+        {
+            "id": "default",
+            "name": "Default Map",
+            "gridWidth": 6,
+            "gridHeight": 6,
+            "waypoints": [
+                {
+                    "position": {
+                        "x": 0,
+                        "y": 3
+                    },
+                    "pathProgress": 0.0
+                },
+                {
+                    "position": {
+                        "x": 2,
+                        "y": 3
+                    },
+                    "pathProgress": 0.2
+                },
+                {
+                    "position": {
+                        "x": 2,
+                        "y": 1
+                    },
+                    "pathProgress": 0.4
+                },
+                {
+                    "position": {
+                        "x": 4,
+                        "y": 1
+                    },
+                    "pathProgress": 0.6
+                },
+                {
+                    "position": {
+                        "x": 4,
+                        "y": 4
+                    },
+                    "pathProgress": 0.8
+                },
+                {
+                    "position": {
+                        "x": 5,
+                        "y": 4
+                    },
+                    "pathProgress": 1.0
+                }
+            ],
+            "blockedTiles": []
+        }
+    ]
+}

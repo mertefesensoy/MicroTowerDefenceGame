@@ -1,0 +1,56 @@
+name: Core CI
+
+on:
+  push:
+    branches: [ main, develop, 'mission/**' ]
+    paths:
+      - 'MicroTDCore/**'
+      - '.github/workflows/core-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'MicroTDCore/**'
+      - '.github/workflows/core-ci.yml'
+
+jobs:
+  test:
+    name: Build and Test Core Package
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Select Xcode (best effort)
+      run: |
+        if [ -d "/Applications/Xcode_15.2.app" ]; then
+          sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer
+        else
+          echo "Xcode 15.2 not found; using default Xcode"
+        fi
+        xcodebuild -version
+    
+    - name: Build Package
+      working-directory: MicroTDCore
+      run: swift build
+    
+    - name: Run Tests
+      working-directory: MicroTDCore
+      run: swift test
+    
+    - name: Verify Resource Bundling
+      working-directory: MicroTDCore
+      run: |
+        echo "Testing that JSON resources are properly bundled..."
+        swift test --filter testGoldenSeed
+        echo "✅ Resources successfully loaded from Bundle.module"
+    
+    - name: Verify No UI Imports
+      working-directory: MicroTDCore/Sources/MicroTDCore
+      run: |
+        if grep -RInE '^\s*import\s+(SwiftUI|SpriteKit|UIKit)\b' . --include="*.swift"; then
+          echo "❌ ERROR: Found UI framework imports in Core"
+          exit 1
+        else
+          echo "✅ Core package has zero UI imports"
+        fi

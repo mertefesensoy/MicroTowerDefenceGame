@@ -1,0 +1,54 @@
+{
+    "enemies": [
+        {
+            "id": "runner",
+            "name": "Runner",
+            "hp": 50.0,
+            "speed": 2.0,
+            "coinReward": 10,
+            "livesCost": 1,
+            "description": "Fast, low health",
+            "isBoss": false
+        },
+        {
+            "id": "tank",
+            "name": "Tank",
+            "hp": 200.0,
+            "speed": 0.5,
+            "coinReward": 25,
+            "livesCost": 1,
+            "description": "Slow, high health",
+            "isBoss": false
+        },
+        {
+            "id": "swarm",
+            "name": "Swarm",
+            "hp": 20.0,
+            "speed": 1.5,
+            "coinReward": 5,
+            "livesCost": 1,
+            "description": "Weak enemies in large groups",
+            "isBoss": false
+        },
+        {
+            "id": "shielded",
+            "name": "Shielded",
+            "hp": 100.0,
+            "speed": 1.0,
+            "coinReward": 20,
+            "livesCost": 1,
+            "description": "Balanced stats",
+            "isBoss": false
+        },
+        {
+            "id": "boss_behemoth",
+            "name": "Behemoth",
+            "hp": 1000.0,
+            "speed": 0.3,
+            "coinReward": 100,
+            "livesCost": 5,
+            "description": "Massive boss enemy",
+            "isBoss": true
+        }
+    ]
+}

@@ -1,0 +1,308 @@
+{
+    "waves": [
+        {
+            "waveIndex": 0,
+            "coinReward": 50,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 30
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 60
+                }
+            ]
+        },
+        {
+            "waveIndex": 1,
+            "coinReward": 60,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 20
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 40
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 60
+                }
+            ]
+        },
+        {
+            "waveIndex": 2,
+            "coinReward": 70,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 30
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 45
+                }
+            ]
+        },
+        {
+            "waveIndex": 3,
+            "coinReward": 80,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 40
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 20
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 30
+                }
+            ]
+        },
+        {
+            "waveIndex": 4,
+            "coinReward": 90,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 20
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 40
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 50
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 60
+                }
+            ]
+        },
+        {
+            "waveIndex": 5,
+            "coinReward": 200,
+            "isBossWave": true,
+            "spawns": [
+                {
+                    "enemyType": "boss_behemoth",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 60
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 120
+                }
+            ]
+        },
+        {
+            "waveIndex": 6,
+            "coinReward": 100,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 30
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 60
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 70
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 80
+                }
+            ]
+        },
+        {
+            "waveIndex": 7,
+            "coinReward": 110,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 30
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 45
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 55
+                },
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 90
+                }
+            ]
+        },
+        {
+            "waveIndex": 8,
+            "coinReward": 120,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 15
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 30
+                },
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 60
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 75
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 85
+                }
+            ]
+        },
+        {
+            "waveIndex": 9,
+            "coinReward": 130,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 30
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 60
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 90
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 100
+                }
+            ]
+        },
+        {
+            "waveIndex": 10,
+            "coinReward": 140,
+            "isBossWave": false,
+            "spawns": [
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 40
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 60
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 80
+                },
+                {
+                    "enemyType": "runner",
+                    "spawnTick": 90
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 100
+                },
+                {
+                    "enemyType": "swarm",
+                    "spawnTick": 110
+                }
+            ]
+        },
+        {
+            "waveIndex": 11,
+            "coinReward": 300,
+            "isBossWave": true,
+            "spawns": [
+                {
+                    "enemyType": "boss_behemoth",
+                    "spawnTick": 0
+                },
+                {
+                    "enemyType": "tank",
+                    "spawnTick": 60
+                },
+                {
+                    "enemyType": "boss_behemoth",
+                    "spawnTick": 120
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 180
+                },
+                {
+                    "enemyType": "shielded",
+                    "spawnTick": 200
+                }
+            ]
+        }
+    ]
+}
