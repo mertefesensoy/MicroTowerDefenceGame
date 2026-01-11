@@ -41,8 +41,8 @@ jobs:
     - name: Verify Resource Bundling
       working-directory: MicroTDCore
       run: |
-        echo "Testing that JSON resources are properly bundled..."
-        swift test --filter testGoldenSeed
+        echo "Testing that JSON resources are properly bundled via Bundle.module..."
+        swift test --filter ResourceLoadingTests
         echo "✅ Resources successfully loaded from Bundle.module"
     
     - name: Verify No UI Imports
