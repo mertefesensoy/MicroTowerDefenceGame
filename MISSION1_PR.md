@@ -40,7 +40,7 @@ Expected: ✅ All tests pass including:
 ### Verify No UI Imports
 ```bash
 cd Sources/MicroTDCore
-grep -r "import SwiftUI\|import SpriteKit\|import UIKit" . --include="*.swift"
+grep -RInE '^\s*import\s+(SwiftUI|SpriteKit|UIKit)\b' . --include="*.swift"
 ```
 Expected: No output (zero UI imports)
 
