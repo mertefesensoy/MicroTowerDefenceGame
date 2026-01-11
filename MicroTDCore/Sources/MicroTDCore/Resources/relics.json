@@ -1,0 +1,108 @@
+{
+    "relics": [
+        {
+            "id": "power_amp",
+            "name": "Power Amplifier",
+            "description": "+50% tower damage",
+            "rarity": "common",
+            "effects": [
+                {
+                    "type": "towerDamageMultiplier",
+                    "value": 1.5
+                }
+            ]
+        },
+        {
+            "id": "long_barrel",
+            "name": "Long Barrel",
+            "description": "+30% tower range",
+            "rarity": "common",
+            "effects": [
+                {
+                    "type": "towerRangeMultiplier",
+                    "value": 1.3
+                }
+            ]
+        },
+        {
+            "id": "rapid_loader",
+            "name": "Rapid Loader",
+            "description": "+40% fire rate",
+            "rarity": "uncommon",
+            "effects": [
+                {
+                    "type": "towerFireRateMultiplier",
+                    "value": 1.4
+                }
+            ]
+        },
+        {
+            "id": "frost_coating",
+            "name": "Frost Coating",
+            "description": "All towers slow by 30%",
+            "rarity": "uncommon",
+            "effects": [
+                {
+                    "type": "enemySlowOnHit",
+                    "value": 0.3
+                }
+            ]
+        },
+        {
+            "id": "coin_magnet",
+            "name": "Coin Magnet",
+            "description": "+50% coin rewards",
+            "rarity": "rare",
+            "effects": [
+                {
+                    "type": "coinMultiplier",
+                    "value": 1.5
+                }
+            ]
+        },
+        {
+            "id": "starting_capital",
+            "name": "Starting Capital",
+            "description": "+100 starting coins",
+            "rarity": "common",
+            "effects": [
+                {
+                    "type": "startingCoins",
+                    "value": 100.0
+                }
+            ]
+        },
+        {
+            "id": "devastation",
+            "name": "Devastation",
+            "description": "+100% damage, -30% range",
+            "rarity": "legendary",
+            "effects": [
+                {
+                    "type": "towerDamageMultiplier",
+                    "value": 2.0
+                },
+                {
+                    "type": "towerRangeMultiplier",
+                    "value": 0.7
+                }
+            ]
+        },
+        {
+            "id": "sniper_scope",
+            "name": "Sniper Scope",
+            "description": "+100% range, -40% fire rate",
+            "rarity": "rare",
+            "effects": [
+                {
+                    "type": "towerRangeMultiplier",
+                    "value": 2.0
+                },
+                {
+                    "type": "towerFireRateMultiplier",
+                    "value": 0.6
+                }
+            ]
+        }
+    ]
+}
