@@ -1,0 +1,36 @@
+# Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcworkspace/contents.xcworkspacedata
+*.xcuserstate
+*.xcuserdatad/
+DerivedData/
+.swiftpm/
+.build/
+
+# Swift Package Manager
+/.build
+/Packages
+/*.xcodeproj
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Config files with secrets (future)
+**/AdMobConfig.plist
+**/Secrets.swift
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.swp
+*~.nib
+*.tmp
+*.bak
