@@ -26,7 +26,7 @@ public struct ProgressionSystem: Sendable {
         // 2. Check for Level Up
         // Continue leveling up as long as we have enough XP
         while true {
-            let threshold = rules.xpRequiredForLevel(profile.level)
+            let threshold = rules.totalXpRequiredToReachNextLevel(from: profile.level)
             if profile.xp >= threshold {
                 let oldLevel = profile.level
                 profile.level += 1

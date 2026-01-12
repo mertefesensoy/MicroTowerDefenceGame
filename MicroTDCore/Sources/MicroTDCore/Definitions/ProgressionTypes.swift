@@ -14,6 +14,18 @@ public struct ProgressionProfile: Codable, Equatable, Sendable {
         self.level = level
         self.unlocks = unlocks
     }
+    
+    /// Normalize unlocks to match current level
+    /// Call this after loading from disk to ensure rule changes/missing data don't leave gaps
+    public mutating func reconcileUnlocks(rules: ProgressionRules) {
+        // Collect all unlocks implied by current level
+        for lv in 1...level {
+            let impliedUnlocks = rules.unlocksForLevel(lv)
+            for id in impliedUnlocks {
+                unlocks.insert(id)
+            }
+        }
+    }
 }
 
 /// Summary of a completed run for progression calculation
@@ -44,7 +56,49 @@ public enum ProgressionEvent: Equatable, Sendable {
     case unlocked(id: String)
 }
 
-/// Rules for XP and Unlocks
+// MARK: - Persistence DTOs
+
+/// Metadata about the last completed run
+public struct LastRunMetadata: Codable, Equatable, Sendable {
+    public var runSeed: UInt64
+    public var didWin: Bool
+    public var wavesCleared: Int
+    public var ticksSurvived: Int
+
+    public init(runSeed: UInt64, didWin: Bool, wavesCleared: Int, ticksSurvived: Int) {
+        self.runSeed = runSeed
+        self.didWin = didWin
+        self.wavesCleared = wavesCleared
+        self.ticksSurvived = ticksSurvived
+    }
+}
+
+/// Versioned save file envelope for persistence
+/// Wraps ProgressionProfile with metadata to support future migrations
+public struct ProgressionSaveFile: Codable, Equatable, Sendable {
+    public static let currentSchemaVersion = 1
+
+    public var schemaVersion: Int
+    public var savedAt: Date
+    public var profile: ProgressionProfile
+
+    /// Optional metadata about the last run (for debugging/UX)
+    public var lastRun: LastRunMetadata?
+
+    public init(
+        schemaVersion: Int = Self.currentSchemaVersion,
+        savedAt: Date = Date(),
+        profile: ProgressionProfile,
+        lastRun: LastRunMetadata? = nil
+    ) {
+        self.schemaVersion = schemaVersion
+        self.savedAt = savedAt
+        self.profile = profile
+        self.lastRun = lastRun
+    }
+}
+
+// MARK: - Progression Rules
 public struct ProgressionRules: Sendable {
     public init() {}
     
@@ -60,9 +114,12 @@ public struct ProgressionRules: Sendable {
         return xp
     }
     
-    // Leveling Curve
-    public func xpRequiredForLevel(_ level: Int) -> Int {
-        // Simple quadratic curve: 100 * level^2
+    // Leveling Curve (CUMULATIVE XP model)
+    // Returns the TOTAL XP required to reach the NEXT level from the given level.
+    // e.g., totalXpRequiredToReachNextLevel(from: 1) = 100 means you need 100 total XP to reach level 2.
+    //       totalXpRequiredToReachNextLevel(from: 2) = 400 means you need 400 total XP to reach level 3.
+    // Your profile.xp is never reset; it accumulates across all runs.
+    public func totalXpRequiredToReachNextLevel(from level: Int) -> Int {
         return 100 * level * level
     }
     

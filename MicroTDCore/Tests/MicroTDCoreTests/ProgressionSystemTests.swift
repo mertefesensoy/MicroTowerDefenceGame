@@ -35,7 +35,7 @@ final class ProgressionSystemTests: XCTestCase {
         let system = ProgressionSystem(rules: rules)
         var profile = ProgressionProfile(xp: 0, level: 1, unlocks: [])
         
-        let xpNeeded = rules.xpRequiredForLevel(1) // 100
+        let xpNeeded = rules.totalXpRequiredToReachNextLevel(from: 1) // 100
         
         // Run worth 150 XP
         let summary = RunSummary(
