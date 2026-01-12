@@ -25,7 +25,7 @@ jobs:
         run: xcodegen generate
         
       - name: Resolve Package Dependencies
-        run: xcodebuild -resolvePackageDependencies -project MicroTowerDefenceGame.xcodeproj -destination 'platform=iOS Simulator,name=iPhone 14'
+        run: xcodebuild -resolvePackageDependencies -project MicroTowerDefenceGame.xcodeproj -destination 'platform=iOS Simulator,name=iPhone 15'
 
       - name: Build App (Simulator, no signing)
         run: |
@@ -35,7 +35,7 @@ jobs:
             -scheme MicroTowerDefenceGame \
             -configuration Debug \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 14' \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
             build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
