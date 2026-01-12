@@ -184,15 +184,28 @@ public final class GameState {
                     eventLog.emit(.coinChanged(newTotal: economySystem.coins, delta: waveDef.coinReward, reason: "wave_complete", tick: tick))
                 }
                 
-                // Check for relic offer
-                if (waveIndex + 1) % relicOfferInterval == 0 {
+                // Determine next step: victory, relic choice, or next wave
+                let nextWaveIndex = waveIndex + 1
+                
+                // 1. VICTORY takes precedence (even if relic would be offered)
+                if nextWaveIndex >= waveSystem.totalWaves {
+                    try? stateMachine.transition(to: .postRunSummary)
+                    eventLog.emit(.runCompleted(
+                        wavesCompleted: nextWaveIndex,  // Count, not index
+                        totalCoins: economySystem.totalCoinsEarned,
+                        tick: tick
+                    ))
+                }
+                // 2. Relic choice (only if not victory)
+                else if nextWaveIndex % relicOfferInterval == 0 {
                     try? stateMachine.transition(to: .relicChoice(waveIndex: waveIndex))
                     let choices = relicSystem.generateChoices(count: 3)
                     let choiceIDs = choices.map { $0.id }
                     eventLog.emit(.relicOffered(choices: choiceIDs, tick: tick))
-                } else {
-                    // Move to next wave building
-                    try? stateMachine.transition(to: .building(waveIndex: waveIndex + 1))
+                }
+                // 3. Continue to next wave
+                else {
+                    try? stateMachine.transition(to: .building(waveIndex: nextWaveIndex))
                 }
             }
         }

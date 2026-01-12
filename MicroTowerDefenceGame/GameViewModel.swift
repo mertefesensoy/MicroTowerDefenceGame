@@ -14,6 +14,7 @@ final class GameViewModel: ObservableObject {
     
     // Progression tracking
     private var didFinalizeCurrentRun = false
+    private var pendingDidWin: Bool = false  // Store didWin from terminal event
     
     // Timer
     private var timer: AnyCancellable?
@@ -86,8 +87,9 @@ final class GameViewModel: ObservableObject {
         lastEventIndex = game.eventLog.events.count
         
         var sawGameOverEvent = false
+        var sawRunCompletedEvent = false
         
-        // Track last action for debugging  + detect terminal event)
+        // Track last action for debugging + detect terminal events
         for event in newEvents {
             switch event {
             case .towerPlaced(let id, let type, _, _, _):
@@ -96,6 +98,10 @@ final class GameViewModel: ObservableObject {
                 lastAction = "Tower sold (ID: \(id), refund: \(refund))"
             case .gameOver:
                 sawGameOverEvent = true
+                pendingDidWin = false
+            case .runCompleted:
+                sawRunCompletedEvent = true
+                pendingDidWin = true
             default:
                 break
             }
@@ -106,9 +112,9 @@ final class GameViewModel: ObservableObject {
         lives = game.currentLives
         currentTickText = "Tick: \(game.currentTick)"
         
-        // ✅ Finalize exactly once when Core emits gameOver
-        if sawGameOverEvent {
-            finalizeRunIfNeeded(didWin: false)
+        // ✅ Finalize exactly once when Core emits terminal event
+        if sawGameOverEvent || sawRunCompletedEvent {
+            finalizeRunIfNeeded(didWin: pendingDidWin)
         }
         
         // Update wave/phase text
