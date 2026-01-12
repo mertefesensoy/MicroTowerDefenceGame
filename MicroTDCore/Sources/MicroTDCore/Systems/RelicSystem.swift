@@ -22,8 +22,6 @@ public final class RelicSystem: @unchecked Sendable {
         self.rng = rng
     }
     
-    // TEMPORARILY DISABLED FOR CI BISECT
-    /*
     /// Generate a list of relic IDs to offer
     public func makeOfferIDs(count: Int, excludeOwned: Bool = true) -> [String] {
         // Pool construction
@@ -34,13 +32,13 @@ public final class RelicSystem: @unchecked Sendable {
         // If pool is smaller than count, return everything (shuffled)
         if pool.count <= count {
             var allIds = pool.map(\.id)
-            allIds.shuffle(using: &rng)
+            rng.shuffle(&allIds)
             return allIds
         }
         
         // Deterministic selection
         var temp = pool.map(\.id)
-        temp.shuffle(using: &rng)
+        rng.shuffle(&temp)
         
         return Array(temp.prefix(count))
     }
@@ -89,5 +87,4 @@ public final class RelicSystem: @unchecked Sendable {
         self.owned = newOwned
         recomputeModifiers()
     }
-    */
 }
