@@ -3,7 +3,7 @@
 
 import Foundation
 
-public final class RelicSystem {
+public final class RelicSystem: @unchecked Sendable {
     private let db: RelicDatabase
     private var rng: SeededRNG
     
