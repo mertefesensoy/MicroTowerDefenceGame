@@ -24,6 +24,9 @@ jobs:
       - name: Generate Project
         run: xcodegen generate
         
+      - name: Debug File Structure
+        run: ls -R
+        
       - name: Build App (Simulator, no signing)
         run: |
           set -o pipefail
