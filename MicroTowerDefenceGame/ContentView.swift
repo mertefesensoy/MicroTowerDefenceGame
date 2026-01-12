@@ -6,8 +6,22 @@ import SpriteKit
 import MicroTDCore
 
 struct ContentView: View {
-    @StateObject private var vm = GameViewModel()
+    @EnvironmentObject private var appState: AppState
     @StateObject private var bridge = GameBridge()
+    
+    var body: some View {
+        GameRootView(runManager: appState.runManager, bridge: bridge)
+    }
+}
+
+struct GameRootView: View {
+    @StateObject private var vm: GameViewModel
+    let bridge: GameBridge
+    
+    init(runManager: RunManager<JSONFileProfileStore>, bridge: GameBridge) {
+        _vm = StateObject(wrappedValue: GameViewModel(runManager: runManager))
+        self.bridge = bridge
+    }
     
     var body: some View {
         ZStack {

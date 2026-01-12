@@ -9,7 +9,11 @@ import MicroTDCore
 final class GameViewModel: ObservableObject {
     // Core simulation
     private let game: GameState
+    private let runManager: RunManager<JSONFileProfileStore>
     private var lastEventIndex: Int = 0
+    
+    // Progression tracking
+    private var didFinalizeCurrentRun = false
     
     // Timer
     private var timer: AnyCancellable?
@@ -25,7 +29,9 @@ final class GameViewModel: ObservableObject {
     @Published var currentTickText: String = "Tick: 0"
     @Published var lastAction: String = "None"
     
-    init() {
+    init(runManager: RunManager<JSONFileProfileStore>) {
+        self.runManager = runManager
+        
         // Load definitions and create game state
         do {
             let definitions = try GameDefinitions.loadFromBundle()
@@ -79,12 +85,19 @@ final class GameViewModel: ObservableObject {
         let newEvents = game.eventLog.slice(from: lastEventIndex)
         lastEventIndex = game.eventLog.events.count
         
-        // Track last action for debugging (Commit 3 will use newEvents for SpriteKit)
+        var sawGameOverEvent = false
+        
+        // Track last action for debugging  + detect terminal event)
         for event in newEvents {
-            if case .towerPlaced(let id, let type, _, _, _) = event {
+            switch event {
+            case .towerPlaced(let id, let type, _, _, _):
                 lastAction = "Tower placed: \(type) (ID: \(id))"
-            } else if case .towerSold(let id, let refund, _) = event {
+            case .towerSold(let id, let refund, _):
                 lastAction = "Tower sold (ID: \(id), refund: \(refund))"
+            case .gameOver:
+                sawGameOverEvent = true
+            default:
+                break
             }
         }
         
@@ -92,6 +105,11 @@ final class GameViewModel: ObservableObject {
         coins = game.currentCoins
         lives = game.currentLives
         currentTickText = "Tick: \(game.currentTick)"
+        
+        // ✅ Finalize exactly once when Core emits gameOver
+        if sawGameOverEvent {
+            finalizeRunIfNeeded(didWin: false)
+        }
         
         // Update wave/phase text
         switch game.currentState {
@@ -115,5 +133,39 @@ final class GameViewModel: ObservableObject {
         
         // Update render snapshot (for Commit 3 SpriteKit)
         renderSnapshot = game.getRenderSnapshot()
+    }
+    
+    // MARK: - Progression Integration
+    
+    private func finalizeRunIfNeeded(didWin: Bool) {
+        guard !didFinalizeCurrentRun else { return }
+        didFinalizeCurrentRun = true  // Set latch BEFORE calling applyRun (non-transactional)
+        
+        let summary = game.makeRunSummary(didWin: didWin)
+        
+        let t0 = CFAbsoluteTimeGetCurrent()
+        do {let events = try runManager.applyRun(summary)
+            #if DEBUG
+            print("applyRun took \(CFAbsoluteTimeGetCurrent() - t0)s")
+            #endif
+            
+            // TODO: Surface progression events to UI (toasts, level-up animations)
+            for event in events {
+                switch event {
+                case .xpGained(let amount):
+                    print("🎯 +\(amount) XP")
+                case .leveledUp(let from, let to):
+                    print("⬆️ Level \(from) → \(to)")
+                case .unlocked(let id):
+                    print("🔓 Unlocked \(id)")
+                }
+            }
+        } catch {
+            #if DEBUG
+            print("❌ Progression save failed: \(error)")
+            #endif
+            // Optional: Show non-blocking banner/toast to user
+            // Note: No retry allowed - applyRun is non-transactional
+        }
     }
 }
