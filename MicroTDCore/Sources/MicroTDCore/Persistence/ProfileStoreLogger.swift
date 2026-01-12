@@ -2,7 +2,6 @@
 // Logging extension for ProfileStore operations
 
 import Foundation
-import os.log
 
 /// Logging hook for ProfileStore operations
 /// Enable visibility into schema version, file paths, and corruption events
@@ -12,7 +11,10 @@ public protocol ProfileStoreLogger {
     func didHandleCorruption(policy: CorruptProfilePolicy, fileURL: URL, backupURL: URL?)
 }
 
-/// Default logger using os.log (disabled in production by default)
+#if canImport(os)
+import os
+
+/// Default logger using os.log (Apple platforms only)
 public struct OSLogProfileStoreLogger: ProfileStoreLogger {
     private let logger = Logger(subsystem: "com.microtd.core", category: "ProfileStore")
     
@@ -34,3 +36,4 @@ public struct OSLogProfileStoreLogger: ProfileStoreLogger {
         }
     }
 }
+#endif

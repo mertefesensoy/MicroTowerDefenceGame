@@ -124,11 +124,26 @@ public final class JSONFileProfileStore: ProfileStore {
         
         try data.write(to: tempURL)
         
-        // Replace original file (remove old, move temp)
+        // Atomic replace: use replaceItemAt for true atomicity
+        // Fallback to remove+move if replaceItemAt unavailable (shouldn't happen on modern iOS)
         if FileManager.default.fileExists(atPath: fileURL.path) {
-            try FileManager.default.removeItem(at: fileURL)
+            _ = try? FileManager.default.replaceItemAt(
+                fileURL,
+                withItemAt: tempURL,
+                backupItemName: nil,
+                options: .withoutDeletingBackupItem
+            )
+            // If replaceItemAt failed, temp file still exists - clean up
+            if FileManager.default.fileExists(atPath: tempURL.path) {
+                // Fallback: non-atomic but better than nothing
+                try FileManager.default.removeItem(at: fileURL)
+                try FileManager.default.moveItem(at: tempURL, to: fileURL)
+            }
+        } else {
+            // First save, no file exists yet
+            try FileManager.default.moveItem(at: tempURL, to: fileURL)
         }
-        try FileManager.default.moveItem(at: tempURL, to: fileURL)
+
         
         logger?.didSave(
             schemaVersion: ProgressionSaveFile.currentSchemaVersion,

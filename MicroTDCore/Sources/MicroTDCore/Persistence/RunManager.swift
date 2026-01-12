@@ -4,6 +4,8 @@
 import Foundation
 
 /// Manages the active progression profile and handles run completion
+/// - Note: MainActor-isolated to prevent concurrent saves and ensure deterministic profile updates
+@MainActor
 public final class RunManager<Store: ProfileStore> {
     private let store: Store
     private let rules: ProgressionRules
