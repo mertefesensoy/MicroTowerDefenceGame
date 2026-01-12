@@ -26,6 +26,11 @@ public final class GameState {
     public private(set) var lives: Int
     private var towerGrid: [GridPosition: Tower] = [:]
     
+    // Deterministic ID assignment (monotonic counters)
+    private var nextEnemyInstanceId: Int = 1
+    private var nextTowerInstanceId: Int = 1
+    private var enemiesDefeated: Int = 0
+    
     // Output
     public private(set) var eventLog: EventLog = EventLog()
     public private(set) var commandLog: CommandLog = CommandLog()
@@ -84,14 +89,38 @@ public final class GameState {
         return lives
     }
     
+    /// Get render snapshot for SpriteKit (DTOs only, no Core entity types)
+    public func getRenderSnapshot() -> RenderSnapshot {
+        let renderEnemies = enemies
+            .map { enemy in
+                RenderEnemy(id: enemy.instanceId, type: enemy.typeID, pathProgress: enemy.pathProgress)
+            }
+            .sorted { $0.id < $1.id }  // Deterministic ordering
+        
+        let renderTowers = towers
+            .map { tower in
+                RenderTower(id: tower.instanceId, type: tower.typeID, gridX: tower.position.x, gridY: tower.position.y)
+            }
+            .sorted { $0.id < $1.id }  // Deterministic ordering
+        
+        return RenderSnapshot(enemies: renderEnemies, towers: renderTowers)
+    }
+    
     /// Main simulation tick - advances game by one fixed timestep
     public func tick() {
+        // Use current tick for this frame, increment AFTER processing
+        let tick = clock.currentTick
+        defer { clock.step() }  // Ensures tick 0 is processed on first call
+        
         // Check wave spawns
-        let spawnsThisTick = waveSystem.checkSpawns(currentTick: currentTick)
+        let spawnsThisTick = waveSystem.checkSpawns(currentTick: tick)
         for (typeID, enemyDef) in spawnsThisTick {
-            let enemy = Enemy(typeID: typeID, baseDef: enemyDef)
+            let enemyId = nextEnemyInstanceId
+            nextEnemyInstanceId += 1  // SINGLE INCREMENT SITE for enemy IDs
+            
+            let enemy = Enemy(instanceId: enemyId, typeID: typeID, baseDef: enemyDef)
             enemies.append(enemy)
-            eventLog.emit(.enemySpawned(id: enemy.id, type: typeID, pathProgress: 0.0, tick: currentTick))
+            eventLog.emit(.enemySpawned(id: enemyId, type: typeID, pathProgress: 0.0, tick: tick))
         }
         
         // Tower firing
@@ -102,18 +131,19 @@ public final class GameState {
                 if let target = combatSystem.findTarget(for: tower, enemies: enemies) {
                     let result = combatSystem.executeAttack(tower: tower, target: target)
                     
-                    eventLog.emit(.towerFired(towerID: tower.id, targetID: target.id, damage: result.damage, tick: currentTick))
-                    eventLog.emit(.enemyDamaged(id: target.id, damage: result.damage, remainingHP: result.targetRemainingHP, tick: currentTick))
+                    eventLog.emit(.towerFired(damage: result.damage, tick: tick))
+                    eventLog.emit(.enemyDamaged(damage: result.damage, remainingHP: result.targetRemainingHP, tick: tick))
                     
                     if result.slowApplied {
-                        eventLog.emit(.enemySlowed(id: target.id, slowAmount: tower.slowOnHit, durationTicks: 60, tick: currentTick))
+                        eventLog.emit(.enemySlowed(slowAmount: tower.slowOnHit, durationTicks: 60,  tick: tick))
                     }
                     
                     if result.targetDied {
                         let coinReward = target.baseDef.coinReward
                         economySystem.addCoins(coinReward, reason: "kill")
-                        eventLog.emit(.enemyDied(id: target.id, coinReward: coinReward, tick: currentTick))
-                        eventLog.emit(.coinChanged(newTotal: economySystem.coins, delta: coinReward, reason: "kill", tick: currentTick))
+                        enemiesDefeated += 1
+                        eventLog.emit(.enemyDied(id: target.instanceId, coinReward: coinReward, tick: tick))
+                        eventLog.emit(.coinChanged(newTotal: economySystem.coins, delta: coinReward, reason: "kill", tick: tick))
                     }
                 }
             }
@@ -130,12 +160,12 @@ public final class GameState {
                 // Check if reached end
                 if enemy.hasReachedEnd {
                     lives -= enemy.baseDef.livesCost
-                    eventLog.emit(.enemyLeaked(id: enemy.id, livesCost: enemy.baseDef.livesCost, tick: currentTick))
-                    eventLog.emit(.livesChanged(newTotal: lives, delta: -enemy.baseDef.livesCost, tick: currentTick))
+                    eventLog.emit(.enemyLeaked(id: enemy.instanceId, livesCost: enemy.baseDef.livesCost, tick: tick))
+                    eventLog.emit(.livesChanged(newTotal: lives, delta: -enemy.baseDef.livesCost, tick: tick))
                     
                     if lives <= 0 {
                         try? stateMachine.transition(to: .gameOver)
-                        eventLog.emit(.gameOver(wavesCompleted: waveSystem.currentWave, tick: currentTick))
+                        eventLog.emit(.gameOver(wavesCompleted: waveSystem.currentWave, tick: tick))
                     }
                 }
             }
@@ -150,8 +180,8 @@ public final class GameState {
                 // Wave complete!
                 if let waveDef = definitions.waves.wave(at: waveIndex) {
                     economySystem.addCoins(waveDef.coinReward, reason: "wave_complete")
-                    eventLog.emit(.waveCompleted(index: waveIndex, reward: waveDef.coinReward, tick: currentTick))
-                    eventLog.emit(.coinChanged(newTotal: economySystem.coins, delta: waveDef.coinReward, reason: "wave_complete", tick: currentTick))
+                    eventLog.emit(.waveCompleted(index: waveIndex, reward: waveDef.coinReward, tick: tick))
+                    eventLog.emit(.coinChanged(newTotal: economySystem.coins, delta: waveDef.coinReward, reason: "wave_complete", tick: tick))
                 }
                 
                 // Check for relic offer
@@ -159,7 +189,7 @@ public final class GameState {
                     try? stateMachine.transition(to: .relicChoice(waveIndex: waveIndex))
                     let choices = relicSystem.generateChoices(count: 3)
                     let choiceIDs = choices.map { $0.id }
-                    eventLog.emit(.relicOffered(choices: choiceIDs, tick: currentTick))
+                    eventLog.emit(.relicOffered(choices: choiceIDs, tick: tick))
                 } else {
                     // Move to next wave building
                     try? stateMachine.transition(to: .building(waveIndex: waveIndex + 1))
@@ -199,7 +229,10 @@ public final class GameState {
         guard towerGrid[position] == nil else { return }
         guard economySystem.spendCoins(towerDef.cost) else { return }
         
-        let tower = Tower(typeID: type, position: position, baseDef: towerDef)
+        let towerId = nextTowerInstanceId
+        nextTowerInstanceId += 1  // SINGLE INCREMENT SITE for tower IDs
+        
+        let tower = Tower(instanceId: towerId, typeID: type, position: position, baseDef: towerDef)
         
         // Apply relic modifiers
         tower.damageMultiplier = relicSystem.combinedMultiplier(for: .towerDamageMultiplier)
@@ -210,7 +243,7 @@ public final class GameState {
         towers.append(tower)
         towerGrid[position] = tower
         
-        eventLog.emit(.towerPlaced(id: tower.id, type: type, gridX: position.x, gridY: position.y, tick: currentTick))
+        eventLog.emit(.towerPlaced(id: tower.instanceId, type: type, gridX: position.x, gridY: position.y, tick: currentTick))
         eventLog.emit(.coinChanged(newTotal: economySystem.coins, delta: -towerDef.cost, reason: "tower_purchase", tick: currentTick))
     }
     
@@ -221,10 +254,10 @@ public final class GameState {
         let refund = tower.baseDef.cost / 2
         economySystem.addCoins(refund, reason: "tower_sell")
         
-        towers.removeAll { $0.id == tower.id }
+        towers.removeAll { $0.instanceId == tower.instanceId }
         towerGrid.removeValue(forKey: position)
         
-        eventLog.emit(.towerSold(id: tower.id, refund: refund, tick: currentTick))
+        eventLog.emit(.towerSold(id: tower.instanceId, refund: refund, tick: currentTick))
         eventLog.emit(.coinChanged(newTotal: economySystem.coins, delta: refund, reason: "tower_sell", tick: currentTick))
     }
     
@@ -244,11 +277,34 @@ public final class GameState {
         guard index >= 0 && index < choices.count else { return }
         
         let chosen = choices[index]
-        relicSystem.chooseRelic(id: chosen.id)
+        _ = relicSystem.chooseRelic(id: chosen.id)
         
         eventLog.emit(.relicChosen(relicID: chosen.id, tick: currentTick))
         
         // Transition to next wave
         try? stateMachine.transition(to: .building(waveIndex: waveIndex + 1))
+    }
+    
+    // MARK: - Progression Integration
+    
+    public func makeRunSummary(didWin: Bool) -> RunSummary {
+        // Flatten owned relics into list
+        var relicList: [String] = []
+        for (id, count) in relicSystem.owned {
+            for _ in 0..<count {
+                relicList.append(id)
+            }
+        }
+        relicList.sort() // Deterministic output
+        
+        return RunSummary(
+            runSeed: runSeed,
+            wavesCleared: waveSystem.currentWave, // approximates cleared
+            ticksSurvived: clock.currentTick,
+            coinsEarned: economySystem.totalCoinsEarned,
+            enemiesDefeated: enemiesDefeated,
+            didWin: didWin,
+            relicIDsChosen: relicList
+        )
     }
 }

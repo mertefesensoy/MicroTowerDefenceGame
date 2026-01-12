@@ -2,12 +2,12 @@ name: Core CI
 
 on:
   push:
-    branches: [ main, develop, 'mission/**' ]
+    branches: [ main, master, develop, 'mission/**' ]
     paths:
       - 'MicroTDCore/**'
       - '.github/workflows/core-ci.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
     paths:
       - 'MicroTDCore/**'
       - '.github/workflows/core-ci.yml'

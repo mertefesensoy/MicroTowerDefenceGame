@@ -33,6 +33,12 @@ public final class SimulationClock {
         return ticksToProcess
     }
     
+    /// Step clock by exactly one tick (for Core's fixed-timestep simulation)
+    /// SpriteKit will handle deltaTime + accumulator, Core just ticks at 60Hz
+    public func step() {
+        currentTick += 1
+    }
+    
     /// Get current simulation time in seconds
     public var currentTime: Double {
         return Double(currentTick) * Self.secondsPerTick

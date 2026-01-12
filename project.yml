@@ -1,0 +1,40 @@
+name: MicroTowerDefenceGame
+options:
+  bundleIdPrefix: com.mertefesensoy
+  xcodeVersion: "15.0"
+  deploymentTarget:
+    iOS: "16.0"
+
+packages:
+  MicroTDCore:
+    path: MicroTDCore
+
+targets:
+  MicroTowerDefenceGame:
+    type: application
+    platform: iOS
+    sources: 
+      - path: MicroTowerDefenceGame
+    dependencies:
+      - package: MicroTDCore
+        product: MicroTDCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mertefesensoy.MicroTowerDefenceGame
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        ENABLE_PREVIEWS: YES
+      configs:
+        Debug:
+          CODE_SIGNING_ALLOWED: NO
+          CODE_SIGNING_REQUIRED: NO
+          CODE_SIGN_IDENTITY: ""
+          DEVELOPMENT_TEAM: ""
+
+schemes:
+  MicroTowerDefenceGame:
+    build:
+      targets:
+        MicroTowerDefenceGame: all
+    run:
+      config: Debug

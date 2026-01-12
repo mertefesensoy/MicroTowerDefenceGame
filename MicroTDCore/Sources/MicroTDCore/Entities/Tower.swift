@@ -5,7 +5,7 @@ import Foundation
 
 /// Runtime tower instance placed on grid
 public final class Tower {
-    public let id: UUID
+    public let instanceId: Int  // Deterministic ID for rendering
     public let typeID: String
     public let position: GridPosition
     public let baseDef: TowerDef
@@ -21,8 +21,8 @@ public final class Tower {
     public var fireRateMultiplier: Double = 1.0
     public var slowOnHit: Double = 0.0
     
-    public init(id: UUID = UUID(), typeID: String, position: GridPosition, baseDef: TowerDef) {
-        self.id = id
+    public init(instanceId: Int, typeID: String, position: GridPosition, baseDef: TowerDef) {
+        self.instanceId = instanceId
         self.typeID = typeID
         self.position = position
         self.baseDef = baseDef
