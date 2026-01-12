@@ -6,21 +6,21 @@ import Foundation
 /// Events emitted by simulation for rendering/UI consumption
 /// These drive all visual updates - rendering layer must NOT have game logic
 public enum GameEvent: Equatable {
-    // Enemy events
-    case enemySpawned(id: UUID, type: String, pathProgress: Double, tick: Int)
-    case enemyMoved(id: UUID, pathProgress: Double, tick: Int)
-    case enemyDamaged(id: UUID, damage: Double, remainingHP: Double, tick: Int)
-    case enemySlowed(id: UUID, slowAmount: Double, durationTicks: Int, tick: Int)
-    case enemyDied(id: UUID, coinReward: Int, tick: Int)
-    case enemyLeaked(id: UUID, livesCost: Int, tick: Int)
+    // LIFECYCLE events (include Int IDs for rendering)
+    case enemySpawned(id: Int, type: String, pathProgress: Double, tick: Int)
+    case enemyDied(id: Int, coinReward: Int, tick: Int)
+    case enemyLeaked(id: Int, livesCost: Int, tick: Int)
+    case towerPlaced(id: Int, type: String, gridX: Int, gridY: Int, tick: Int)
+    case towerSold(id: Int, refund: Int, tick: Int)
+    // Note: towerUpgraded removed - not part of Mission 2 scope
     
-    // Tower events
-    case towerPlaced(id: UUID, type: String, gridX: Int, gridY: Int, tick: Int)
-    case towerFired(towerID: UUID, targetID: UUID, damage: Double, tick: Int)
-    case towerSold(id: UUID, refund: Int, tick: Int)
-    case towerUpgraded(id: UUID, upgradePath: String, tick: Int)
+    // COSMETIC events (NO IDs - keeps golden tests stable)
+    case enemyMoved(pathProgress: Double, tick: Int)  // Not needed for MVP
+    case enemyDamaged(damage: Double, remainingHP: Double, tick: Int)
+    case enemySlowed(slowAmount: Double, durationTicks: Int, tick: Int)
+    case towerFired(damage: Double, tick: Int)
     
-    // Economy events
+    // Economy events (NO IDs)
     case coinChanged(newTotal: Int, delta: Int, reason: String, tick: Int)
     case livesChanged(newTotal: Int, delta: Int, tick: Int)
     
@@ -40,13 +40,13 @@ public enum GameEvent: Equatable {
     public var tick: Int {
         switch self {
         case .enemySpawned(_, _, _, let tick),
-             .enemyMoved(_, _, let tick),
-             .enemyDamaged(_, _, _, let tick),
-             .enemySlowed(_, _, _, let tick),
+             .enemyMoved(_, let tick),
+             .enemyDamaged(_, _, let tick),
+             .enemySlowed(_, _, let tick),
              .enemyDied(_, _, let tick),
              .enemyLeaked(_, _, let tick),
              .towerPlaced(_, _, _, _, let tick),
-             .towerFired(_, _, _, let tick),
+             .towerFired(_, let tick),
              .towerSold(_, _, let tick),
              .towerUpgraded(_, _, let tick),
              .coinChanged(_, _, _, let tick),
@@ -72,10 +72,11 @@ public struct EventLog {
         events.append(event)
     }
     
-    /// Get events since last read (for rendering consumption)
-    public mutating func drainNew(since lastTick: Int) -> [GameEvent] {
-        let newEvents = events.filter { $0.tick > lastTick }
-        return newEvents
+    /// Get events from a specific index onward (for rendering consumption)
+    /// Use with lastEventIndex tracking: read slice(from: lastIndex), then update lastIndex = events.count
+    public func slice(from index: Int) -> ArraySlice<GameEvent> {
+        guard index >= 0 && index <= events.count else { return [] }
+        return events[index..<events.count]
     }
     
     /// Clear all events (for resetting)

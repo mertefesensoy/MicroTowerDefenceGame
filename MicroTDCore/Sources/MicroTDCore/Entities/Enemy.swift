@@ -16,7 +16,7 @@ public struct SlowEffect {
 
 /// Runtime enemy instance moving along path
 public final class Enemy {
-    public let id: UUID
+    public let instanceId: Int  // Deterministic ID for rendering
     public let typeID: String
     public let baseDef: EnemyDef
     
@@ -25,8 +25,8 @@ public final class Enemy {
     public private(set) var pathProgress: Double = 0.0
     public private(set) var slowEffect: SlowEffect?
     
-    public init(id: UUID = UUID(), typeID: String, baseDef: EnemyDef) {
-        self.id = id
+    public init(instanceId: Int, typeID: String, baseDef: EnemyDef) {
+        self.instanceId = instanceId
         self.typeID = typeID
         self.baseDef = baseDef
         self.currentHP = baseDef.hp
