@@ -219,7 +219,7 @@ final class GameViewModel: ObservableObject {
                     xpGained += amount
                 case .unlocked(let id):
                     newUnlocks.append(id)
-                case .levelUp:
+                case .leveledUp:
                     break
                 }
             }
