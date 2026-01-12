@@ -31,22 +31,34 @@ final class RelicSystemTests: XCTestCase {
     }
     
     func testRNGIsolationFailureChecks() {
-        // Ensure that applying a relic does NOT advance RNG
-        let rng = SeededRNG(seed: 999)
-        let system = RelicSystem(db: db, rng: rng)
+        // Robust test comparing two parallel systems with identical seeds.
+        // System A: Apply Relic -> Make Offer
+        // System B: Make Offer (Control)
+        // If applyRelic consumes RNG, the offers will diverge.
         
-        // Snapshot RNG state (by checking next random value)
-        let controlRNG = SeededRNG(seed: 999)
-        _ = controlRNG.nextUInt64() // Advance once
+        let seed: UInt64 = 999
+        let count = 2
         
-        // In system:
-        _ = rng.nextUInt64() // Advance once to match control
+        // System A
+        let rngA = SeededRNG(seed: seed)
+        let systemA = RelicSystem(db: db, rng: rngA)
+        // Advance RNG slightly to simulate real game state
+        _ = systemA.makeOfferIDs(count: count)
+        // ACTION: Apply relic (Should be RNG-free)
+        systemA.applyRelic(id: "r1")
+        // Checkpoint: Next offer
+        let offerA = systemA.makeOfferIDs(count: count, excludeOwned: false)
+
+        // System B (Control)
+        let rngB = SeededRNG(seed: seed)
+        let systemB = RelicSystem(db: db, rng: rngB)
+        // Advance RNG exactly same amount
+        _ = systemB.makeOfferIDs(count: count)
+        // NO ACTION
+        // Checkpoint: Next offer
+        let offerB = systemB.makeOfferIDs(count: count, excludeOwned: false) // Use false to ensure pool is identical despite inventory diff
         
-        // Apply relic (should be RNG-free)
-        system.applyRelic(id: "r1")
-        
-        // Assert next random value matches
-        XCTAssertEqual(rng.nextUInt64(), controlRNG.nextUInt64(), "Applying relic must not consume RNG")
+        XCTAssertEqual(offerA, offerB, "Applying relic must NOT consume RNG state - offers diverged")
     }
     
     func testModifierStacking() {

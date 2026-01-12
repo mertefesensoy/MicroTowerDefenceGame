@@ -3,7 +3,7 @@
 
 import Foundation
 
-public final class RelicSystem: @unchecked Sendable {
+public final class RelicSystem {
     private let db: RelicDatabase
     private var rng: SeededRNG
     
@@ -106,6 +106,7 @@ public final class RelicSystem: @unchecked Sendable {
     
     // 3. Choose Relic
     public func chooseRelic(id: String) -> Bool {
+        guard db.relic(id: id) != nil else { return false }
         applyRelic(id: id)
         return true
     }
