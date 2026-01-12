@@ -115,11 +115,18 @@ final class RunManagerTests: XCTestCase {
     }
     
     func testApplyRunTriggersUnlocks() throws {
+        // Seed profile through store (Profile at 390 XP, level 2, 10 XP away from level 3)
         let store = JSONFileProfileStore(fileURL: testFileURL)
-        let manager = try RunManager(store: store)
+        try store.save(
+            ProgressionProfile(
+                xp: 390,
+                level: 2,
+                unlocks: ["relic_uncommon_pack", "tower_sniper"]
+            ),
+            lastRun: nil
+        )
         
-        // Set profile to 390 XP at level 2 (10 XP away from level 3)
-        manager.profile = ProgressionProfile(xp: 390, level: 2, unlocks: ["relic_uncommon_pack", "tower_sniper"])
+        let manager = try RunManager(store: store)
         
         let summary = RunSummary(
             runSeed: 1,
