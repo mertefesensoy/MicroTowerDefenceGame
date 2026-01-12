@@ -213,7 +213,7 @@ final class GameScene: SKScene {
         }
         
         let node = SKShapeNode(path: pathVis)
-        node.strokeColor = SKColor(green: 1.0, alpha: 0.2)
+        node.strokeColor = SKColor.green.withAlphaComponent(0.2)
         node.lineWidth = tileSize * 0.5
         node.lineJoin = .round
         node.zPosition = 1
