@@ -111,6 +111,9 @@ final class ProfileStoreTests: XCTestCase {
             .filter { $0.lastPathComponent.hasPrefix("profile.corrupt.") }
         
         XCTAssertFalse(backupFiles.isEmpty, "Backup file should have been created")
+        
+        // Original corrupt file should be moved (not exist anymore)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: testFileURL.path), "Original corrupt file should be moved, not copied")
     }
     
     func testCorruptFileWithSilentPolicyReturnsDefaultNoBackup() throws {
