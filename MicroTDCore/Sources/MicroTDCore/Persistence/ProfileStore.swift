@@ -131,9 +131,14 @@ public final class JSONFileProfileStore: ProfileStore {
         print("💾 SAVE_BEGIN (v\(ProgressionSaveFile.currentSchemaVersion))")
         #endif
         
-        // Atomic write: write to temp file, then replace
+        // Atomic write: write to temp file
         let tempURL = fileURL.deletingLastPathComponent()
             .appendingPathComponent(".\(fileURL.lastPathComponent).\(UUID().uuidString).tmp")
+        
+        // Ensure temp file is cleaned up no matter what happens
+        defer {
+            try? FileManager.default.removeItem(at: tempURL)
+        }
         
         try data.write(to: tempURL)
         
@@ -146,28 +151,49 @@ public final class JSONFileProfileStore: ProfileStore {
             Thread.sleep(forTimeInterval: 0.8)
         }
         
+        // TEST HOOK: Simulate replacement failure to prove fallback safety (old file preservation)
+        if ProcessInfo.processInfo.environment["FORCE_REPLACE_FAILURE"] == "1" {
+             print("💉 FORCE_REPLACE_FAILURE active: Throwing synthetic error before replacement")
+             throw NSError(domain: "TestDomain", code: 1, userInfo: [NSLocalizedDescriptionKey: "Synthetic replace failure"])
+        }
+        
         print("💾 REPLACE_BEGIN")
         #endif
         
-        // Atomic replace: use replaceItemAt for true atomicity
-        // Fallback to remove+move if replaceItemAt unavailable (shouldn't happen on modern iOS)
         if FileManager.default.fileExists(atPath: fileURL.path) {
-            _ = try? FileManager.default.replaceItemAt(
+            // Atomic swap: replace fileURL with tempURL
+            // Throws on failure -> Old file preserved, Temp deleted by defer
+            try FileManager.default.replaceItemAt(
                 fileURL,
                 withItemAt: tempURL,
                 backupItemName: nil,
                 options: .withoutDeletingBackupItem
             )
-            // If replaceItemAt failed, temp file still exists - clean up
-            if FileManager.default.fileExists(atPath: tempURL.path) {
-                // Fallback: non-atomic but better than nothing
-                try FileManager.default.removeItem(at: fileURL)
-                try FileManager.default.moveItem(at: tempURL, to: fileURL)
-            }
         } else {
-            // First save, no file exists yet
+            // First save or fresh install: atomic move
             try FileManager.default.moveItem(at: tempURL, to: fileURL)
         }
+
+        #if DEBUG
+        print("💾 REPLACE_DONE")
+        
+        // VERIFICATION: Metadata Post-Check (Disk Truth)
+        // Non-mutating peek at the file we just saved
+        if let diskData = try? Data(contentsOf: fileURL),
+           let diskSave = try? JSONDecoder().decode(ProgressionSaveFile.self, from: diskData) {
+            let diskSeed = diskSave.lastRun?.runSeed ?? 0
+            let memorySeed = lastRun?.runSeed ?? 0
+            if diskSeed == memorySeed {
+                 print("✅ VERIFIED: Disk lastRun (\(diskSeed)) matches memory.")
+            } else {
+                 print("❌ VERIFICATION FAIL: Disk (\(diskSeed)) != Memory (\(memorySeed))")
+            }
+        }
+        
+        // Confirmation log for validation
+        let seedLog = lastRun.map { " Seed:\($0.runSeed)" } ?? ""
+        print("✅ SAVE_DONE. Lv\(profile.level)/\(profile.xp)XP\(seedLog)")
+        #endif
 
         #if DEBUG
         print("💾 REPLACE_DONE")
