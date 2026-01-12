@@ -65,7 +65,7 @@ final class AppState: ObservableObject {
             #endif
         }
 
-        let url = dir.appendingPathComponent("profile.json")
+        var url = dir.appendingPathComponent("profile.json")
 
         // Avoid iCloud backup for game progression
         var values = URLResourceValues()
