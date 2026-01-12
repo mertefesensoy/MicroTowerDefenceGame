@@ -115,7 +115,7 @@ struct HUDView: View {
                     .font(.caption)
                     .foregroundStyle(.blue)
                 Spacer()
-                Text("Seed: \(lastRunSeed)")
+                Text("Saved: \(lastRunSeed)")
                     .font(.caption2)
                     .foregroundStyle(.gray)
             }

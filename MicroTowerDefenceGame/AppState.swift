@@ -25,6 +25,13 @@ final class AppState: ObservableObject {
         do {
             self.runManager = try RunManager(store: store)
         } catch {
+            let nsError = error as NSError
+            if nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoPermissionError {
+                #if DEBUG
+                print("❌ AppState: Launch failed due to protected data (device locked). This is expected if pre-warming.")
+                #endif
+            }
+            
             #if DEBUG
             fatalError("Failed to initialize RunManager: \(error)")
             #else

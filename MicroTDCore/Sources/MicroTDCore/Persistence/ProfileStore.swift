@@ -127,12 +127,8 @@ public final class JSONFileProfileStore: ProfileStore {
         
         let data = try encoder.encode(saveFile)
         
-        // DEBUG: Artificial delay to test "kill during save"
         #if DEBUG
-        if ProcessInfo.processInfo.environment["SLOW_PROFILE_SAVE"] == "1" {
-            print("🐢 SLOW_PROFILE_SAVE: Sleeping for 0.8s...")
-            Thread.sleep(forTimeInterval: 0.8)
-        }
+        print("💾 SAVE_BEGIN (v\(ProgressionSaveFile.currentSchemaVersion))")
         #endif
         
         // Atomic write: write to temp file, then replace
@@ -140,6 +136,18 @@ public final class JSONFileProfileStore: ProfileStore {
             .appendingPathComponent(".\(fileURL.lastPathComponent).\(UUID().uuidString).tmp")
         
         try data.write(to: tempURL)
+        
+        #if DEBUG
+        print("💾 TEMP_WRITTEN: \(tempURL.lastPathComponent)")
+        
+        // Correct window for kill-switch testing: Temp file exists, original untouched
+        if ProcessInfo.processInfo.environment["SLOW_PROFILE_SAVE"] == "1" {
+            print("🐢 SLOW_PROFILE_SAVE: Sleeping for 0.8s... (KILL NOW to test atomicity)")
+            Thread.sleep(forTimeInterval: 0.8)
+        }
+        
+        print("💾 REPLACE_BEGIN")
+        #endif
         
         // Atomic replace: use replaceItemAt for true atomicity
         // Fallback to remove+move if replaceItemAt unavailable (shouldn't happen on modern iOS)
@@ -162,9 +170,10 @@ public final class JSONFileProfileStore: ProfileStore {
         }
 
         #if DEBUG
+        print("💾 REPLACE_DONE")
         // Confirmation log for validation
         let seedLog = lastRun.map { " Seed:\($0.runSeed)" } ?? ""
-        print("✅ SAVE FINISHED. V\(ProgressionSaveFile.currentSchemaVersion) Lv\(profile.level)/\(profile.xp)XP\(seedLog)")
+        print("✅ SAVE_DONE. Lv\(profile.level)/\(profile.xp)XP\(seedLog)")
         #endif
         
         logger?.didSave(
