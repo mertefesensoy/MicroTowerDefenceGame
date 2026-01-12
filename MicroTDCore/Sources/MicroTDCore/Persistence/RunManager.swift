@@ -4,8 +4,8 @@
 import Foundation
 
 /// Manages the active progression profile and handles run completion
-public final class RunManager {
-    private let store: ProfileStore
+public final class RunManager<Store: ProfileStore> {
+    private let store: Store
     private let rules: ProgressionRules
     private let progressionSystem: ProgressionSystem
     
@@ -16,7 +16,7 @@ public final class RunManager {
     ///   - store: Profile storage backend
     ///   - rules: Progression rules for XP/unlocks
     /// - Throws: If loading fails and corruption policy is `.throwError`
-    public init(store: ProfileStore, rules: ProgressionRules = ProgressionRules()) throws {
+    public init(store: Store, rules: ProgressionRules = ProgressionRules()) throws {
         self.store = store
         self.rules = rules
         self.progressionSystem = ProgressionSystem(rules: rules)
