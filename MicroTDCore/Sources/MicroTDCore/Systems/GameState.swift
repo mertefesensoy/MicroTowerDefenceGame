@@ -90,20 +90,26 @@ public final class GameState {
     
     /// Get render snapshot for SpriteKit (DTOs only, no Core entity types)
     public func getRenderSnapshot() -> RenderSnapshot {
-        let renderEnemies = enemies.map { enemy in
-            RenderEnemy(id: enemy.instanceId, type: enemy.typeID, pathProgress: enemy.pathProgress)
-        }
-        let renderTowers = towers.map { tower in
-            RenderTower(id: tower.instanceId, type: tower.typeID, gridX: tower.position.x, gridY: tower.position.y)
-        }
+        let renderEnemies = enemies
+            .map { enemy in
+                RenderEnemy(id: enemy.instanceId, type: enemy.typeID, pathProgress: enemy.pathProgress)
+            }
+            .sorted { $0.id < $1.id }  // Deterministic ordering
+        
+        let renderTowers = towers
+            .map { tower in
+                RenderTower(id: tower.instanceId, type: tower.typeID, gridX: tower.position.x, gridY: tower.position.y)
+            }
+            .sorted { $0.id < $1.id }  // Deterministic ordering
+        
         return RenderSnapshot(enemies: renderEnemies, towers: renderTowers)
     }
     
     /// Main simulation tick - advances game by one fixed timestep
     public func tick() {
-        // Advance clock by exactly one tick (60 Hz fixed timestep)
-        clock.step()
+        // Use current tick for this frame, increment AFTER processing
         let tick = clock.currentTick
+        defer { clock.step() }  // Ensures tick 0 is processed on first call
         
         // Check wave spawns
         let spawnsThisTick = waveSystem.checkSpawns(currentTick: tick)
