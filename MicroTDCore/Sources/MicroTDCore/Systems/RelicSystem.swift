@@ -32,13 +32,13 @@ public final class RelicSystem {
         // If pool is smaller than count, return everything (shuffled)
         if pool.count <= count {
             var allIds = pool.map(\.id)
-            rng.shuffle(&allIds)
+            allIds.shuffle(using: &rng)
             return allIds
         }
         
         // Deterministic selection
         var temp = pool.map(\.id)
-        rng.shuffle(&temp)
+        temp.shuffle(using: &rng)
         
         return Array(temp.prefix(count))
     }

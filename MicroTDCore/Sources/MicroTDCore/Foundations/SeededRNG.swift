@@ -3,8 +3,12 @@
 
 /// High-quality deterministic random number generator
 /// Uses Xoshiro256** algorithm for reproducibility across runs
-public final class SeededRNG {
+public final class SeededRNG: RandomNumberGenerator {
     private var state: (UInt64, UInt64, UInt64, UInt64)
+    
+    public func next() -> UInt64 {
+        return nextUInt64()
+    }
     
     public init(seed: UInt64) {
         // SplitMix64 for state initialization from single seed
