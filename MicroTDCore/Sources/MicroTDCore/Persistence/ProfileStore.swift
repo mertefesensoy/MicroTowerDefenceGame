@@ -98,8 +98,11 @@ public final class JSONFileProfileStore: ProfileStore {
         
         try data.write(to: tempURL, options: .atomic)
         
-        // Replace original file
-        _ = try? FileManager.default.replaceItemAt(fileURL, withItemAt: tempURL)
+        // Replace original file (remove old, move temp)
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.removeItem(at: fileURL)
+        }
+        try FileManager.default.moveItem(at: tempURL, to: fileURL)
     }
     
     // MARK: - Private Helpers
