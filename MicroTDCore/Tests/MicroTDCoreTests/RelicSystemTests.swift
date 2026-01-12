@@ -37,16 +37,16 @@ final class RelicSystemTests: XCTestCase {
         
         // Snapshot RNG state (by checking next random value)
         let controlRNG = SeededRNG(seed: 999)
-        _ = controlRNG.next() // Advance once
+        _ = controlRNG.nextUInt64() // Advance once
         
         // In system:
-        _ = rng.next() // Advance once to match control
+        _ = rng.nextUInt64() // Advance once to match control
         
         // Apply relic (should be RNG-free)
         system.applyRelic(id: "r1")
         
         // Assert next random value matches
-        XCTAssertEqual(rng.next(), controlRNG.next(), "Applying relic must not consume RNG")
+        XCTAssertEqual(rng.nextUInt64(), controlRNG.nextUInt64(), "Applying relic must not consume RNG")
     }
     
     func testModifierStacking() {
