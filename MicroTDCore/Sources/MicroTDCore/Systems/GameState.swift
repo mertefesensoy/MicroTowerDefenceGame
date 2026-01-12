@@ -29,123 +29,18 @@ public final class GameState {
     // Deterministic ID assignment (monotonic counters)
     private var nextEnemyInstanceId: Int = 1
     private var nextTowerInstanceId: Int = 1
+    private var enemiesDefeated: Int = 0
     
     // Output
     public private(set) var eventLog: EventLog = EventLog()
-    public private(set) var commandLog: CommandLog = CommandLog()
-    
-    // Config
-    private let startingLives: Int = 20
-    private let relicOfferInterval: Int = 2  // every 2 waves
-    
-    public init(runSeed: UInt64, definitions: GameDefinitions, mapID: String = "default") {
-        self.runSeed = runSeed
-        self.definitions = definitions
-        
-        // Initialize systems
-        self.rng = SeededRNG(seed: runSeed)
-        self.clock = SimulationClock()
-        self.stateMachine = RunStateMachine(initialState: .preRun)
-        
-        guard let map = definitions.maps.map(withID: mapID) else {
-            fatalError("Map '\(mapID)' not found")
-        }
-        self.mapDef = map
-        
-        self.waveSystem = WaveSystem(
-            waveDefs: definitions.waves,
-            enemyDefs: definitions.enemies,
-            rng: rng
-        )
-        self.combatSystem = CombatSystem(mapDef: map)
-        self.economySystem = EconomySystem(startingCoins: 200)
-        self.relicSystem = RelicSystem(
-            relicDefs: definitions.relics,
-            rng: rng
-        )
-        
-        self.lives = startingLives
-        
-        // Start at building phase for wave 0
-        try? stateMachine.transition(to: .building(waveIndex: 0))
-    }
-    
-    // MARK: - Public Interface
-    
-    public var currentTick: Int {
-        return clock.currentTick
-    }
-    
-    public var currentState: RunState {
-        return stateMachine.state
-    }
-    
-    public var currentCoins: Int {
-        return economySystem.coins
-    }
-    
-    public var currentLives: Int {
-        return lives
-    }
-    
-    /// Get render snapshot for SpriteKit (DTOs only, no Core entity types)
-    public func getRenderSnapshot() -> RenderSnapshot {
-        let renderEnemies = enemies
-            .map { enemy in
-                RenderEnemy(id: enemy.instanceId, type: enemy.typeID, pathProgress: enemy.pathProgress)
-            }
-            .sorted { $0.id < $1.id }  // Deterministic ordering
-        
-        let renderTowers = towers
-            .map { tower in
-                RenderTower(id: tower.instanceId, type: tower.typeID, gridX: tower.position.x, gridY: tower.position.y)
-            }
-            .sorted { $0.id < $1.id }  // Deterministic ordering
-        
-        return RenderSnapshot(enemies: renderEnemies, towers: renderTowers)
-    }
-    
-    /// Main simulation tick - advances game by one fixed timestep
-    public func tick() {
-        // Use current tick for this frame, increment AFTER processing
-        let tick = clock.currentTick
-        defer { clock.step() }  // Ensures tick 0 is processed on first call
-        
-        // Check wave spawns
-        let spawnsThisTick = waveSystem.checkSpawns(currentTick: tick)
-        for (typeID, enemyDef) in spawnsThisTick {
-            let enemyId = nextEnemyInstanceId
-            nextEnemyInstanceId += 1  // SINGLE INCREMENT SITE for enemy IDs
-            
-            let enemy = Enemy(instanceId: enemyId, typeID: typeID, baseDef: enemyDef)
-            enemies.append(enemy)
-            eventLog.emit(.enemySpawned(id: enemyId, type: typeID, pathProgress: 0.0, tick: tick))
-        }
-        
-        // Tower firing
-        for tower in towers {
-            tower.incrementTick()
-            
-            if tower.canFire() {
-                if let target = combatSystem.findTarget(for: tower, enemies: enemies) {
-                    let result = combatSystem.executeAttack(tower: tower, target: target)
-                    
-                    eventLog.emit(.towerFired(damage: result.damage, tick: tick))
-                    eventLog.emit(.enemyDamaged(damage: result.damage, remainingHP: result.targetRemainingHP, tick: tick))
-                    
-                    if result.slowApplied {
-                        eventLog.emit(.enemySlowed(slowAmount: tower.slowOnHit, durationTicks: 60,  tick: tick))
-                    }
-                    
+//...
                     if result.targetDied {
                         let coinReward = target.baseDef.coinReward
                         economySystem.addCoins(coinReward, reason: "kill")
+                        enemiesDefeated += 1
                         eventLog.emit(.enemyDied(id: target.instanceId, coinReward: coinReward, tick: tick))
                         eventLog.emit(.coinChanged(newTotal: economySystem.coins, delta: coinReward, reason: "kill", tick: tick))
                     }
-                }
-            }
-        }
         
         // Move enemies
         let progressPerTick = 1.0 / Double(SimulationClock.ticksPerSecond)
