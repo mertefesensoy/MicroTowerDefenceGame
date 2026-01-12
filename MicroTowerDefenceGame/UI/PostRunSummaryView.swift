@@ -55,14 +55,14 @@ struct PostRunSummaryView: View {
                     }
                     
                     if !model.unlocks.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("UNLOCKED:")
                                 .font(.caption)
                                 .foregroundStyle(.green)
-                            ForEach(model.unlocks, id: \.self) { unlock in
-                                Text("• \(unlock)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.white)
+                            
+                            ForEach(model.unlocks, id: \.self) { unlockID in
+                                let d = UnlockCatalog.descriptor(for: unlockID)
+                                UnlockRow(descriptor: d)
                             }
                         }
                         .padding()
@@ -114,6 +114,29 @@ struct PostRunSummaryView: View {
             )
             .padding(20)
         }
+    }
+}
+
+struct UnlockRow: View {
+    let descriptor: UnlockDescriptor
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: descriptor.systemImage)
+                .font(.title2)
+                .foregroundColor(.yellow)
+                .frame(width: 32)
+            
+            VStack(alignment: .leading) {
+                Text(descriptor.title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text(descriptor.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.gray)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
