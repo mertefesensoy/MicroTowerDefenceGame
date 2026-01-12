@@ -79,7 +79,6 @@ struct GameRootView: View {
                 .transition(.opacity.animation(.easeInOut(duration: 0.3)))
             }
         }
-        }
         .onAppear {
             bridge.bind(to: vm) // Connect Bridge to VM
             vm.start() // Start Loop

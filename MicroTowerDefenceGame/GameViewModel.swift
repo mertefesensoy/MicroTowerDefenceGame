@@ -8,7 +8,7 @@ import MicroTDCore
 @MainActor
 final class GameViewModel: ObservableObject {
     // Core simulation
-    private let game: GameState
+    private var game: GameState
     private let runManager: RunManager<JSONFileProfileStore>
     private var lastEventIndex: Int = 0
     
@@ -84,10 +84,10 @@ final class GameViewModel: ObservableObject {
     func dismissPostRun() {
         postRun = nil
         // Reset game for new run (simple restart for now)
-        // TODO: Move to distinct "menu" state if needed
-        let definitions = try! GameDefinitions.loadFromBundle()
+        // Re-create GameState instance as systems are immutable
+        let definitions = game.definitions // Reuse loaded definitions
         // New random seed for new run
-        game.reset(runSeed: UInt64.random(in: 0...UInt64.max), definitions: definitions)
+        self.game = GameState(runSeed: UInt64.random(in: 0...UInt64.max), definitions: definitions)
         
         // Reset VM state
         didFinalizeCurrentRun = false
@@ -199,12 +199,8 @@ final class GameViewModel: ObservableObject {
         let ticksSurvived = game.currentTick
         
         // 2. Create summary (Core Logic)
-        let summary = RunSummary(
-            runSeed: game.runSeed,
-            didWin: didWin,
-            wavesCleared: waves,
-            ticksSurvived: ticksSurvived
-        )
+        // Use GameState helper to ensure all fields (coins, relics) are populated
+        let summary = game.makeRunSummary(didWin: didWin)
         
         do {
             // 3. Apply Progression (Persistent Write)
