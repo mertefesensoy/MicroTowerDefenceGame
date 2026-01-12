@@ -9,14 +9,14 @@ on:
 jobs:
   build:
     name: Build iOS App
-    runs-on: macos-14
+    runs-on: macos-13
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Select Xcode 15.3
-        run: sudo xcode-select -s /Applications/Xcode_15.3.app
+      - name: Select Xcode 15.0
+        run: sudo xcode-select -s /Applications/Xcode_15.0.app
         
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -25,7 +25,7 @@ jobs:
         run: xcodegen generate
         
       - name: Resolve Package Dependencies
-        run: xcodebuild -resolvePackageDependencies -project MicroTowerDefenceGame.xcodeproj
+        run: xcodebuild -resolvePackageDependencies -project MicroTowerDefenceGame.xcodeproj -destination 'platform=iOS Simulator,name=iPhone 14'
 
       - name: Build App (Simulator, no signing)
         run: |
@@ -35,7 +35,7 @@ jobs:
             -scheme MicroTowerDefenceGame \
             -configuration Debug \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -destination 'platform=iOS Simulator,name=iPhone 14' \
             build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
