@@ -57,8 +57,9 @@ public final class SeededRNG {
     
     /// Shuffle array in place (Fisher-Yates)
     public func shuffle<T>(_ array: inout [T]) {
+        guard array.count > 1 else { return }
         for i in stride(from: array.count - 1, through: 1, by: -1) {
-            let j = nextInt(in: 0...(i + 1))
+            let j = nextInt(in: 0..<(i + 1))  // 0...i inclusive, using Range
             array.swapAt(i, j)
         }
     }

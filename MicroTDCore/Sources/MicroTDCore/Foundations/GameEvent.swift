@@ -48,7 +48,6 @@ public enum GameEvent: Equatable {
              .towerPlaced(_, _, _, _, let tick),
              .towerFired(_, let tick),
              .towerSold(_, _, let tick),
-             .towerUpgraded(_, _, let tick),
              .coinChanged(_, _, _, let tick),
              .livesChanged(_, _, let tick),
              .waveStarted(_, _, let tick),
