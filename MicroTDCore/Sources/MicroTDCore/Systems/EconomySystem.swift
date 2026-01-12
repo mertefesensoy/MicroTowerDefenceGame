@@ -8,15 +8,21 @@ public final class EconomySystem {
     public private(set) var coins: Int
     public private(set) var startingCoins: Int
     
+    public private(set) var totalCoinsEarned: Int = 0
+    
     public init(startingCoins: Int = 200) {
         self.startingCoins = startingCoins
         self.coins = startingCoins
+        // Initial coins don't count as "earned"
     }
     
     /// Add coins
     @discardableResult
     public func addCoins(_ amount: Int, reason: String = "reward") -> Int {
         coins += amount
+        if amount > 0 {
+            totalCoinsEarned += amount
+        }
         return coins
     }
     
@@ -36,5 +42,6 @@ public final class EconomySystem {
     public func reset(startingCoins: Int) {
         self.startingCoins = startingCoins
         self.coins = startingCoins
+        self.totalCoinsEarned = 0
     }
 }
