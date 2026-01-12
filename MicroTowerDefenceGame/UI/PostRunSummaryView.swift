@@ -140,6 +140,97 @@ struct UnlockRow: View {
     }
 }
 
+struct XPAnimatedBar: View {
+    let startLevel: Int
+    let endLevel: Int
+    let startFraction: Double   // 0...1 within startLevel
+    let endFraction: Double     // 0...1 within endLevel
+    let didWin: Bool
+
+    @State private var shownLevel: Int
+    @State private var progress: Double
+    @State private var showLevelUp: Bool = false
+
+    init(startLevel: Int, endLevel: Int, startFraction: Double, endFraction: Double, didWin: Bool) {
+        self.startLevel = startLevel
+        self.endLevel = endLevel
+        self.startFraction = startFraction
+        self.endFraction = endFraction
+        self.didWin = didWin
+        _shownLevel = State(initialValue: startLevel)
+        _progress = State(initialValue: startFraction)
+    }
+
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Text("Level \(shownLevel)")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                if showLevelUp {
+                    Text("LEVEL UP!")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.yellow)
+                        .foregroundStyle(.black)
+                        .cornerRadius(8)
+                        .transition(.scale)
+                }
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.white.opacity(0.15))
+
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(didWin ? Color.blue : Color.red)
+                        .frame(width: geo.size.width * max(0, min(1, progress)))
+                }
+            }
+            .frame(height: 12)
+        }
+        .task { await runAnimation() }
+    }
+
+    @MainActor
+    private func runAnimation() async {
+        // Delay slightly for modal transition
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        
+        // No level-up
+        if startLevel == endLevel {
+            withAnimation(.easeOut(duration: 0.9)) { progress = endFraction }
+            return
+        }
+
+        // Step 1: finish current level
+        withAnimation(.easeOut(duration: 0.7)) { progress = 1.0 }
+        try? await Task.sleep(nanoseconds: 250_000_000)
+
+        for lvl in (startLevel..<endLevel) {
+            // Pulse badge
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) { showLevelUp = true }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            withAnimation(.easeOut(duration: 0.2)) { showLevelUp = false }
+
+            // Advance level and reset bar
+            shownLevel = lvl + 1
+            progress = 0.0
+            try? await Task.sleep(nanoseconds: 120_000_000)
+
+            // If this is the final level, fill to endFraction; otherwise fill to 1.0
+            let target = (shownLevel == endLevel) ? endFraction : 1.0
+            withAnimation(.easeOut(duration: 0.65)) { progress = target }
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+    }
+}
+
 // Helper View
 struct StatBadge: View {
     let val: String
@@ -180,7 +271,9 @@ extension Color {
             xpGained: 500,
             startLevel: 5,
             endLevel: 6,
-            unlocks: ["Cannon_V2", "Relic_Slot_2"],
+            startFraction: 0.8,
+            endFraction: 0.3,
+            unlocks: ["tower_sniper", "relic_uncommon_pack", "unknown_test_id"],
             saveStatus: .saved(seed: 123456)
         ),
         onContinue: {}

@@ -231,6 +231,28 @@ final class GameViewModel: ObservableObject {
             let seconds = ticksSurvived / 60
             let timeStr = String(format: "%02d:%02d", seconds / 60, seconds % 60)
             
+            // Calculate fractions
+            let rules = ProgressionRules() // Default rules
+            
+            // Start state
+            let startFloor = rules.xpThreshold(forLevel: startLevel)
+            let startCeiling = rules.xpThreshold(forLevel: startLevel + 1)
+            let startRange = Double(max(1, startCeiling - startFloor))
+            // Current XP before run = startFloor? No.
+            // Wait, profile stores TOTAL XP.
+            // So startXP = runManager.profile.xp is the END XP.
+            // We need startXP = endXP - xpGained.
+            let totalEndXP = runManager.profile.xp
+            let totalStartXP = totalEndXP - xpGained
+            
+            let startFraction = Double(totalStartXP - startFloor) / startRange
+            
+            // End state
+            let endFloor = rules.xpThreshold(forLevel: endLevel)
+            let endCeiling = rules.xpThreshold(forLevel: endLevel + 1)
+            let endRange = Double(max(1, endCeiling - endFloor))
+            let endFraction = Double(totalEndXP - endFloor) / endRange
+            
             self.postRun = PostRunPresentation(
                 didWin: didWin,
                 wavesCompleted: waves,
@@ -239,6 +261,8 @@ final class GameViewModel: ObservableObject {
                 xpGained: xpGained,
                 startLevel: startLevel,
                 endLevel: endLevel,
+                startFraction: max(0, min(1, startFraction)),
+                endFraction: max(0, min(1, endFraction)),
                 unlocks: newUnlocks,
                 saveStatus: .saved(seed: saveSeed)
             )
@@ -262,6 +286,8 @@ final class GameViewModel: ObservableObject {
                 xpGained: 0,
                 startLevel: runManager.profile.level,
                 endLevel: runManager.profile.level,
+                startFraction: 0,
+                endFraction: 0,
                 unlocks: [],
                 saveStatus: isProtected ? .protectedData : .failed(errorMessage: error.localizedDescription)
             )

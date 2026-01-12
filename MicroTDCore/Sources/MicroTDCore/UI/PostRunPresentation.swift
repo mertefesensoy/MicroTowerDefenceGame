@@ -15,6 +15,8 @@ public struct PostRunPresentation: Equatable {
     public let xpGained: Int
     public let startLevel: Int
     public let endLevel: Int
+    public let startFraction: Double
+    public let endFraction: Double
     public let unlocks: [String] // IDs of unlocked items
     
     // MARK: - Persistence Status
@@ -38,6 +40,8 @@ public struct PostRunPresentation: Equatable {
         xpGained: Int,
         startLevel: Int,
         endLevel: Int,
+        startFraction: Double,
+        endFraction: Double,
         unlocks: [String],
         saveStatus: SaveStatus
     ) {
@@ -48,6 +52,8 @@ public struct PostRunPresentation: Equatable {
         self.xpGained = xpGained
         self.startLevel = startLevel
         self.endLevel = endLevel
+        self.startFraction = startFraction
+        self.endFraction = endFraction
         self.unlocks = unlocks
         self.saveStatus = saveStatus
     }

@@ -132,4 +132,25 @@ public struct ProgressionRules: Sendable {
         default: return []
         }
     }
+    
+    // Helpers for UI/Tests
+    
+    /// Total XP required to reach the start of this level (the floor)
+    public func xpThreshold(forLevel level: Int) -> Int {
+        guard level > 1 else { return 0 }
+        // Determine cumulative XP for previous level
+        // Since our formula is totalXpRequiredToReachNextLevel(from: L) which is usually "XP to reach L+1"
+        // Then threshold for L is "XP to reach L" which is ...(from: L-1)
+        return totalXpRequiredToReachNextLevel(from: level - 1)
+    }
+    
+    /// All unlock IDs defined in the rules (for catalog coverage checks)
+    public var allKnownUnlockIDs: Set<String> {
+        var ids = Set<String>()
+        // Check a reasonable range of levels (e.g., 1-100)
+        for i in 1...100 {
+            ids.formUnion(unlocksForLevel(i))
+        }
+        return ids
+    }
 }
