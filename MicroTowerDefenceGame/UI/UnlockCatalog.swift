@@ -53,4 +53,18 @@ enum UnlockCatalog {
         #endif
         return .init(id: id, title: "Unknown Unlock", subtitle: id, systemImage: "questionmark.circle")
     }
+    
+    /// Debug helper to verify all core IDs have mapped content
+    /// Call this from AppState.init or similar on debug builds
+    static func checkCatalogCoverage(coreIDs: [String]) {
+        #if DEBUG
+        let missing = coreIDs.filter { descriptors[$0] == nil }
+        if !missing.isEmpty {
+            print("🚨 CRITICAL: Missing UnlockCatalog entries for: \(missing)")
+            // Optional: fatalError("Missing catalog entries!") 
+        } else {
+            print("✅ UnlockCatalog coverage verified (\(descriptors.count) items)")
+        }
+        #endif
+    }
 }
