@@ -223,7 +223,10 @@ public final class GameState {
     // MARK: - Private Implementation
     
     private func placeTower(type: String, at position: GridPosition) {
-        guard case .building = stateMachine.state else { return }
+        guard case .building = stateMachine.state else {
+            assertionFailure("placeTower called in illegal state: \(stateMachine.state)")
+            return
+        }
         guard let towerDef = definitions.towers.tower(withID: type) else { return }
         guard mapDef.isValidPlacement(position) else { return }
         guard towerGrid[position] == nil else { return }
@@ -248,7 +251,10 @@ public final class GameState {
     }
     
     private func sellTower(at position: GridPosition) {
-        guard case .building = stateMachine.state else { return }
+        guard case .building = stateMachine.state else {
+            assertionFailure("sellTower called in illegal state: \(stateMachine.state)")
+            return
+        }
         guard let tower = towerGrid[position] else { return }
         
         let refund = tower.baseDef.cost / 2
@@ -262,7 +268,10 @@ public final class GameState {
     }
     
     private func startNextWave() {
-        guard case .building(let waveIndex) = stateMachine.state else { return }
+        guard case .building(let waveIndex) = stateMachine.state else {
+            assertionFailure("startNextWave called in illegal state: \(stateMachine.state)")
+            return
+        }
         
         if let waveDef = waveSystem.startWave(currentTick: currentTick) {
             try? stateMachine.transition(to: .inWave(waveIndex: waveIndex))
@@ -271,7 +280,10 @@ public final class GameState {
     }
     
     private func chooseRelicAtIndex(_ index: Int) {
-        guard case .relicChoice(let waveIndex) = stateMachine.state else { return }
+        guard case .relicChoice(let waveIndex) = stateMachine.state else {
+            assertionFailure("chooseRelicAtIndex called in illegal state: \(stateMachine.state)")
+            return
+        }
         
         let choices = relicSystem.generateChoices(count: 3)
         guard index >= 0 && index < choices.count else { return }

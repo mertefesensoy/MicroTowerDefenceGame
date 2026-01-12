@@ -28,13 +28,16 @@ public protocol ProfileStore {
 public final class JSONFileProfileStore: ProfileStore {
     private let fileURL: URL
     private let corruptPolicy: CorruptProfilePolicy
+    private let logger: (any ProfileStoreLogger)?
     
     public init(
         fileURL: URL,
-        corruptPolicy: CorruptProfilePolicy = .resetToDefaultAndBackup
+        corruptPolicy: CorruptProfilePolicy = .resetToDefaultAndBackup,
+        logger: (any ProfileStoreLogger)? = nil
     ) {
         self.fileURL = fileURL
         self.corruptPolicy = corruptPolicy
+        self.logger = logger
     }
     
     // MARK: - ProfileStore
@@ -62,6 +65,13 @@ public final class JSONFileProfileStore: ProfileStore {
             var profile = saveFile.profile
             profile.reconcileUnlocks(rules: rules)
             
+            logger?.didLoad(
+                schemaVersion: saveFile.schemaVersion,
+                fileURL: fileURL,
+                profileLevel: profile.level,
+                profileXP: profile.xp
+            )
+            
             return profile
             
         } catch {
@@ -71,10 +81,20 @@ public final class JSONFileProfileStore: ProfileStore {
                 throw error
                 
             case .resetToDefaultAndBackup:
-                try? backupCorruptFile()
+                let backupURL = try? backupCorruptFile()
+                logger?.didHandleCorruption(
+                    policy: corruptPolicy,
+                    fileURL: fileURL,
+                    backupURL: backupURL
+                )
                 return ProgressionProfile()
                 
             case .resetToDefaultSilently:
+                logger?.didHandleCorruption(
+                    policy: corruptPolicy,
+                    fileURL: fileURL,
+                    backupURL: nil
+                )
                 return ProgressionProfile()
             }
         }
@@ -103,11 +123,18 @@ public final class JSONFileProfileStore: ProfileStore {
             try FileManager.default.removeItem(at: fileURL)
         }
         try FileManager.default.moveItem(at: tempURL, to: fileURL)
+        
+        logger?.didSave(
+            schemaVersion: ProgressionSaveFile.currentSchemaVersion,
+            fileURL: fileURL,
+            profileLevel: profile.level,
+            profileXP: profile.xp
+        )
     }
     
     // MARK: - Private Helpers
     
-    private func backupCorruptFile() throws {
+    private func backupCorruptFile() throws -> URL {
         // Use filename-safe timestamp (no colons for Windows compatibility)
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -124,8 +151,10 @@ public final class JSONFileProfileStore: ProfileStore {
             let alt = fileURL.deletingLastPathComponent()
                 .appendingPathComponent("profile.corrupt.\(stamp).\(UUID().uuidString).json")
             try FileManager.default.moveItem(at: fileURL, to: alt)
+            return alt
         } else {
             try FileManager.default.moveItem(at: fileURL, to: backupURL)
+            return backupURL
         }
     }
     
