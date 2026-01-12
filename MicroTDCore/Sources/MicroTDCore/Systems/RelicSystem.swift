@@ -22,6 +22,8 @@ public final class RelicSystem: @unchecked Sendable {
         self.rng = rng
     }
     
+    // TEMPORARILY DISABLED FOR CI BISECT
+    /*
     /// Generate a list of relic IDs to offer
     public func makeOfferIDs(count: Int, excludeOwned: Bool = true) -> [String] {
         // Pool construction
@@ -87,4 +89,5 @@ public final class RelicSystem: @unchecked Sendable {
         self.owned = newOwned
         recomputeModifiers()
     }
+    */
 }
