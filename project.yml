@@ -17,6 +17,7 @@ targets:
       - path: MicroTowerDefenceGame
     dependencies:
       - package: MicroTDCore
+        product: MicroTDCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mertefesensoy.MicroTowerDefenceGame
