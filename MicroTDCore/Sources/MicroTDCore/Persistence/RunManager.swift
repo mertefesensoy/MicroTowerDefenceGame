@@ -24,8 +24,10 @@ public final class RunManager<Store: ProfileStore> {
         self.rules = rules
         self.progressionSystem = ProgressionSystem(rules: rules)
         
-        // Load profile (normalized with reconcileUnlocks)
-        self.profile = try store.load(rules: rules)
+        // Load profile and metadata
+        let (profile, lastRun) = try store.load(rules: rules)
+        self.profile = profile
+        self.lastRun = lastRun
     }
     
     /// Apply a completed run to the profile and persist
@@ -41,22 +43,24 @@ public final class RunManager<Store: ProfileStore> {
             return []
         }
         
-        // Apply progression logic
-        let events = progressionSystem.applyRun(summary, to: &profile)
+        // Compute-then-commit pattern (for save safety)
+        var newProfile = profile
+        let events = progressionSystem.applyRun(summary, to: &newProfile)
         
         // Create metadata for persistence
-        let lastRun = LastRunMetadata(
+        let newLastRun = LastRunMetadata(
             runSeed: summary.runSeed,
             didWin: summary.didWin,
             wavesCleared: summary.wavesCleared,
             ticksSurvived: summary.ticksSurvived
         )
         
-        // Persist updated profile
-        try store.save(profile, lastRun: lastRun)
+        // Persist updated profile first
+        try store.save(newProfile, lastRun: newLastRun)
         
-        // Update in-memory lastRun tracking for idempotency
-        self.lastRun = lastRun
+        // Commit to memory only on success
+        self.profile = newProfile
+        self.lastRun = newLastRun
         
         return events
     }

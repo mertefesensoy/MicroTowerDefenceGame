@@ -32,7 +32,7 @@ final class ProfileStoreTests: XCTestCase {
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let rules = ProgressionRules()
         
-        let profile = try store.load(rules: rules)
+        let (profile, _) = try store.load(rules: rules)
         
         XCTAssertEqual(profile.xp, 0)
         XCTAssertEqual(profile.level, 1)
@@ -60,11 +60,16 @@ final class ProfileStoreTests: XCTestCase {
         try store.save(originalProfile, lastRun: lastRun)
         
         // Load
-        let loadedProfile = try store.load(rules: rules)
+        let (loadedProfile, loadedMetadata) = try store.load(rules: rules)
         
         XCTAssertEqual(loadedProfile.xp, originalProfile.xp)
         XCTAssertEqual(loadedProfile.level, originalProfile.level)
         XCTAssertEqual(loadedProfile.unlocks, originalProfile.unlocks)
+        
+        // Verify metadata roundtrip
+        XCTAssertNotNil(loadedMetadata)
+        XCTAssertEqual(loadedMetadata?.runSeed, lastRun.runSeed)
+        XCTAssertEqual(loadedMetadata?.didWin, lastRun.didWin)
         
         // Verify file exists
         XCTAssertTrue(FileManager.default.fileExists(atPath: testFileURL.path))
@@ -100,7 +105,7 @@ final class ProfileStoreTests: XCTestCase {
         )
         let rules = ProgressionRules()
         
-        let profile = try store.load(rules: rules)
+        let (profile, _) = try store.load(rules: rules)
         
         // Should return default
         XCTAssertEqual(profile.xp, 0)
@@ -127,7 +132,7 @@ final class ProfileStoreTests: XCTestCase {
         )
         let rules = ProgressionRules()
         
-        let profile = try store.load(rules: rules)
+        let (profile, _) = try store.load(rules: rules)
         
         // Should return default
         XCTAssertEqual(profile.xp, 0)
@@ -169,7 +174,7 @@ final class ProfileStoreTests: XCTestCase {
         
         // Load with reconciliation
         let rules = ProgressionRules()
-        let loadedProfile = try store.load(rules: rules)
+        let (loadedProfile, _) = try store.load(rules: rules)
         
         // Should have all level 2 and 3 unlocks
         let expectedUnlocks: Set<String> = [

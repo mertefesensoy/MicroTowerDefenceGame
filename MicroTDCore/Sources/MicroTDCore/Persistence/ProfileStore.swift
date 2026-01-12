@@ -18,7 +18,8 @@ public enum CorruptProfilePolicy: Sendable {
 /// Abstraction for loading/saving progression profiles
 public protocol ProfileStore {
     /// Load profile from storage, applying normalization and migrations
-    func load(rules: ProgressionRules) throws -> ProgressionProfile
+    /// Returns: Tuple of (profile, lastRun) where lastRun is optional metadata from the last processed run
+    func load(rules: ProgressionRules) throws -> (profile: ProgressionProfile, lastRun: LastRunMetadata?)
     
     /// Save profile to storage with optional last run metadata
     func save(_ profile: ProgressionProfile, lastRun: LastRunMetadata?) throws
@@ -48,10 +49,10 @@ public final class JSONFileProfileStore: ProfileStore {
     
     // MARK: - ProfileStore
     
-    public func load(rules: ProgressionRules) throws -> ProgressionProfile {
+    public func load(rules: ProgressionRules) throws -> (profile: ProgressionProfile, lastRun: LastRunMetadata?) {
         // If file doesn't exist, return default
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            return ProgressionProfile()
+            return (ProgressionProfile(), nil)
         }
         
         // Attempt to decode
@@ -78,7 +79,7 @@ public final class JSONFileProfileStore: ProfileStore {
                 profileXP: profile.xp
             )
             
-            return profile
+            return (profile, saveFile.lastRun)
             
         } catch {
             // Handle corruption based on policy
@@ -93,7 +94,7 @@ public final class JSONFileProfileStore: ProfileStore {
                     fileURL: fileURL,
                     backupURL: backupURL
                 )
-                return ProgressionProfile()
+                return (ProgressionProfile(), nil)
                 
             case .resetToDefaultSilently:
                 logger?.didHandleCorruption(
@@ -101,7 +102,7 @@ public final class JSONFileProfileStore: ProfileStore {
                     fileURL: fileURL,
                     backupURL: nil
                 )
-                return ProgressionProfile()
+                return (ProgressionProfile(), nil)
             }
         }
     }

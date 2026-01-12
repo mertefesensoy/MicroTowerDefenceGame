@@ -83,7 +83,7 @@ final class RunManagerTests: XCTestCase {
         
         // Verify persisted (reload from disk)
         let rules = ProgressionRules()
-        let reloadedProfile = try store.load(rules: rules)
+        let (reloadedProfile, _) = try store.load(rules: rules)
         XCTAssertEqual(reloadedProfile.xp, 150)
         XCTAssertEqual(reloadedProfile.level, 2)
     }
@@ -187,7 +187,7 @@ final class RunManagerTests: XCTestCase {
         
         // Verify persisted
         let rules = ProgressionRules()
-        let reloadedProfile = try store.load(rules: rules)
+        let (reloadedProfile, _) = try store.load(rules: rules)
         XCTAssertEqual(reloadedProfile.xp, 0)
     }
 }
