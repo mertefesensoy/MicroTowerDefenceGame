@@ -33,9 +33,7 @@ public final class RunManager<Store: ProfileStore> {
     /// - Throws: If save fails
     public func applyRun(_ summary: RunSummary) throws -> [ProgressionEvent] {
         // Idempotency: reject duplicate runSeeds (prevents double-award)
-        if let lastRun = store.load()?.lastRun,
-           lastRun.runSeed == summary.runSeed {
-            // This run was already processed - no-op
+        if let lastRun = lastRun, lastRun.runSeed == summary.runSeed {
             #if DEBUG
             print("⚠️ RunManager: Duplicate runSeed \(summary.runSeed) detected - skipping")
             #endif
@@ -55,6 +53,9 @@ public final class RunManager<Store: ProfileStore> {
         
         // Persist updated profile
         try store.save(profile, lastRun: lastRun)
+        
+        // Update in-memory lastRun tracking for idempotency
+        self.lastRun = lastRun
         
         return events
     }
