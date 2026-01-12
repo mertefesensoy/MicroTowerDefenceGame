@@ -28,6 +28,9 @@ final class GameViewModel: ObservableObject {
     // Debug state
     @Published var currentTickText: String = "Tick: 0"
     @Published var lastAction: String = "None"
+    @Published var level: Int = 1
+    @Published var xp: Int = 0
+    @Published var lastRunSeed: String = "-"
     
     init(runManager: RunManager<JSONFileProfileStore>) {
         self.runManager = runManager
@@ -117,6 +120,17 @@ final class GameViewModel: ObservableObject {
         coins = game.currentCoins
         lives = game.currentLives
         currentTickText = "Tick: \(game.currentTick)"
+        
+        // Debug updates (Progression visibility)
+        level = runManager.profile.level
+        xp = runManager.profile.xp
+        
+        // Mask the seed for UI (last 6 chars)
+        if let lastRun = runManager.lastRun {
+             lastRunSeed = String(String(lastRun.runSeed).suffix(6))
+        } else {
+             lastRunSeed = "-" 
+        }
         
         // ✅ Finalize exactly once when Core emits terminal event
         if let didWin = terminalOutcome {

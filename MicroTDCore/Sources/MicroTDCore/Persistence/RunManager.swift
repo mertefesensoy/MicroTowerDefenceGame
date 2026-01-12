@@ -12,7 +12,7 @@ public final class RunManager<Store: ProfileStore> {
     private let progressionSystem: ProgressionSystem
     
     public private(set) var profile: ProgressionProfile
-    private var lastRun: LastRunMetadata?  // Track last processed run for idempotency
+    public private(set) var lastRun: LastRunMetadata?  // Track last processed run for idempotency
     
     /// Initialize RunManager and load existing profile
     /// - Parameters:

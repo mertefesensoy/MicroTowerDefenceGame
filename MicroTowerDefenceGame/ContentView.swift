@@ -92,8 +92,14 @@ struct HUDView: View {
     let tickText: String
     let lastAction: String
     
+    // Debug instrumentation
+    var level: Int = 1
+    var xp: Int = 0
+    var lastRunSeed: String = "-"
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            // Stats Row
             HStack {
                 Label("\(coins)", systemImage: "circle.circle")
                     .foregroundStyle(.yellow)
@@ -102,6 +108,18 @@ struct HUDView: View {
                     .foregroundStyle(.red)
             }
             .font(.headline)
+            
+            // Progression Row (Debug)
+            HStack {
+                Text("Lv \(level) (\(xp) XP)")
+                    .font(.caption)
+                    .foregroundStyle(.blue)
+                Spacer()
+                Text("Seed: \(lastRunSeed)")
+                    .font(.caption2)
+                    .foregroundStyle(.gray)
+            }
+            .padding(.vertical, 2)
             
             HStack {
                 Text(waveText)
@@ -129,5 +147,15 @@ struct HUDView: View {
 }
 
 #Preview {
-    ContentView()
+    HUDView(
+        coins: 100, 
+        lives: 20, 
+        waveText: "Wave 1", 
+        phaseText: "Building", 
+        tickText: "Tick: 0", 
+        lastAction: "Ready",
+        level: 5,
+        xp: 1250,
+        lastRunSeed: "A1B2C3"
+    )
 }

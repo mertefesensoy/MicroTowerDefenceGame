@@ -82,6 +82,14 @@ public final class JSONFileProfileStore: ProfileStore {
             return (profile, saveFile.lastRun)
             
         } catch {
+            // CRITICAL: Do NOT treat file protection errors as corruption
+            // If device is locked, rethrow so app can handle (e.g. wait for unlock)
+            let nsError = error as NSError
+            if nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoPermissionError {
+                // Device locked / no permission -> Rethrow, do not reset!
+                throw error
+            }
+        
             // Handle corruption based on policy
             switch corruptPolicy {
             case .throwError:
@@ -119,6 +127,14 @@ public final class JSONFileProfileStore: ProfileStore {
         
         let data = try encoder.encode(saveFile)
         
+        // DEBUG: Artificial delay to test "kill during save"
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["SLOW_PROFILE_SAVE"] == "1" {
+            print("🐢 SLOW_PROFILE_SAVE: Sleeping for 0.8s...")
+            Thread.sleep(forTimeInterval: 0.8)
+        }
+        #endif
+        
         // Atomic write: write to temp file, then replace
         let tempURL = fileURL.deletingLastPathComponent()
             .appendingPathComponent(".\(fileURL.lastPathComponent).\(UUID().uuidString).tmp")
@@ -145,6 +161,11 @@ public final class JSONFileProfileStore: ProfileStore {
             try FileManager.default.moveItem(at: tempURL, to: fileURL)
         }
 
+        #if DEBUG
+        // Confirmation log for validation
+        let seedLog = lastRun.map { " Seed:\($0.runSeed)" } ?? ""
+        print("✅ SAVE FINISHED. V\(ProgressionSaveFile.currentSchemaVersion) Lv\(profile.level)/\(profile.xp)XP\(seedLog)")
+        #endif
         
         logger?.didSave(
             schemaVersion: ProgressionSaveFile.currentSchemaVersion,
