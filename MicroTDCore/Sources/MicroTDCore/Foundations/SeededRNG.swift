@@ -1,11 +1,9 @@
 // SeededRNG.swift
 // Deterministic random number generator using Xoshiro256** algorithm
 
-import Foundation
-
 /// High-quality deterministic random number generator
 /// Uses Xoshiro256** algorithm for reproducibility across runs
-public final class SeededRNG: @unchecked Sendable {
+public final class SeededRNG {
     private var state: (UInt64, UInt64, UInt64, UInt64)
     
     public init(seed: UInt64) {

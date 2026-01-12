@@ -4,8 +4,8 @@
 import Foundation
 
 /// Effect modifier for relics
-public struct RelicEffect: Codable, Equatable, Sendable {
-    public enum EffectType: String, Codable, Sendable {
+public struct RelicEffect: Codable, Equatable {
+    public enum EffectType: String, Codable {
         case towerDamageMultiplier
         case towerRangeMultiplier
         case towerFireRateMultiplier
@@ -24,7 +24,7 @@ public struct RelicEffect: Codable, Equatable, Sendable {
 }
 
 /// Relic rarity tiers
-public enum RelicRarity: String, Codable, Sendable {
+public enum RelicRarity: String, Codable {
     case common
     case uncommon
     case rare
@@ -32,7 +32,7 @@ public enum RelicRarity: String, Codable, Sendable {
 }
 
 /// Relic definition
-public struct RelicDef: Codable, Equatable, Sendable {
+public struct RelicDef: Codable, Equatable {
     public let id: String
     public let name: String
     public let description: String
