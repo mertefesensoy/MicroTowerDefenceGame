@@ -195,11 +195,6 @@ public final class JSONFileProfileStore: ProfileStore {
         print("✅ SAVE_DONE. Lv\(profile.level)/\(profile.xp)XP\(seedLog)")
         #endif
 
-        #if DEBUG
-        print("💾 REPLACE_DONE")
-        // Confirmation log for validation
-        let seedLog = lastRun.map { " Seed:\($0.runSeed)" } ?? ""
-        print("✅ SAVE_DONE. Lv\(profile.level)/\(profile.xp)XP\(seedLog)")
         #endif
         
         logger?.didSave(
