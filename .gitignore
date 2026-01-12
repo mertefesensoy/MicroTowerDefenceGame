@@ -23,6 +23,9 @@ xcuserdata/
 # Config files with secrets (future)
 **/AdMobConfig.plist
 **/Secrets.swift
+.env.match
+.env.*
+!.env.*.template
 
 # IDE
 .vscode/

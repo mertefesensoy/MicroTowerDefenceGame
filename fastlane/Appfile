@@ -1,0 +1,6 @@
+app_identifier("com.mertefesensoy.MicroTowerDefenceGame")
+
+# Uncomment these after filling in .env.match:
+# apple_id(ENV["APPLE_ID"])
+# team_id(ENV["DEVELOPER_PORTAL_TEAM_ID"])
+# itc_team_id(ENV["APP_STORE_CONNECT_TEAM_ID"])
