@@ -76,9 +76,34 @@ final class GameViewModel: ObservableObject {
         game.currentTick
     }
     
+    // MARK: - Post-Run Presentation
+    
+    @Published var postRun: PostRunPresentation? = nil
+    
+    /// Dismiss the summary and reset the game state
+    func dismissPostRun() {
+        postRun = nil
+        // Reset game for new run (simple restart for now)
+        // TODO: Move to distinct "menu" state if needed
+        let definitions = try! GameDefinitions.loadFromBundle()
+        // New random seed for new run
+        game.reset(runSeed: UInt64.random(in: 0...UInt64.max), definitions: definitions)
+        
+        // Reset VM state
+        didFinalizeCurrentRun = false
+        lastEventIndex = 0
+        updateFromCore()
+        
+        // Restart timer
+        start()
+    }
+    
     // MARK: - Private Implementation
     
     private func tickOnce() {
+        // Pausing logic: if postRun is showing, do not tick
+        guard postRun == nil else { return }
+        
         game.tick()
         updateFromCore()
     }
@@ -89,6 +114,7 @@ final class GameViewModel: ObservableObject {
         lastEventIndex = game.eventLog.events.count
         
         var terminalOutcome: Bool? = nil
+        var terminalWaves = 0
         
         // Track last action for debugging + detect terminal events
         for event in newEvents {
@@ -97,20 +123,22 @@ final class GameViewModel: ObservableObject {
                 lastAction = "Tower placed: \(type) (ID: \(id))"
             case .towerSold(let id, let refund, _):
                 lastAction = "Tower sold (ID: \(id), refund: \(refund))"
-            case .gameOver:
+            case .gameOver(let waves, _):
                 #if DEBUG
                 if let existing = terminalOutcome {
                     assertionFailure("Multiple terminal events: didWin=\(existing) then .gameOver")
                 }
                 #endif
                 terminalOutcome = false
-            case .runCompleted:
+                terminalWaves = waves
+            case .runCompleted(let waves, _, _):
                 #if DEBUG
                 if let existing = terminalOutcome {
                     assertionFailure("Multiple terminal events: didWin=\(existing) then .runCompleted")
                 }
                 #endif
                 terminalOutcome = true
+                terminalWaves = waves
             default:
                 break
             }
@@ -134,7 +162,7 @@ final class GameViewModel: ObservableObject {
         
         // ✅ Finalize exactly once when Core emits terminal event
         if let didWin = terminalOutcome {
-            finalizeRunIfNeeded(didWin: didWin)
+             finalizeRunIfNeeded(didWin: didWin, waves: terminalWaves)
         }
         
         // Update wave/phase text
@@ -163,35 +191,84 @@ final class GameViewModel: ObservableObject {
     
     // MARK: - Progression Integration
     
-    private func finalizeRunIfNeeded(didWin: Bool) {
+    private func finalizeRunIfNeeded(didWin: Bool, waves: Int) {
         guard !didFinalizeCurrentRun else { return }
-        didFinalizeCurrentRun = true  // Set latch BEFORE calling applyRun (non-transactional)
+        didFinalizeCurrentRun = true
         
-        let summary = game.makeRunSummary(didWin: didWin)
+        // 1. Capture final ticks
+        let ticksSurvived = game.currentTick
         
-        let t0 = CFAbsoluteTimeGetCurrent()
-        do {let events = try runManager.applyRun(summary)
-            #if DEBUG
-            print("applyRun took \(CFAbsoluteTimeGetCurrent() - t0)s")
-            #endif
+        // 2. Create summary (Core Logic)
+        let summary = RunSummary(
+            runSeed: game.runSeed,
+            didWin: didWin,
+            wavesCleared: waves,
+            ticksSurvived: ticksSurvived
+        )
+        
+        do {
+            // 3. Apply Progression (Persistent Write)
+            // Returns events (deltas)
+            let startLevel = runManager.profile.level
+            let events = try runManager.applyRun(summary)
+            let endLevel = runManager.profile.level
             
-            // TODO: Surface progression events to UI (toasts, level-up animations)
+            // 4. Extract rewards
+            var xpGained = 0
+            var newUnlocks: [String] = []
+            
             for event in events {
                 switch event {
                 case .xpGained(let amount):
-                    print("🎯 +\(amount) XP")
-                case .leveledUp(let from, let to):
-                    print("⬆️ Level \(from) → \(to)")
+                    xpGained += amount
                 case .unlocked(let id):
-                    print("🔓 Unlocked \(id)")
+                    newUnlocks.append(id)
+                case .levelUp:
+                    break
                 }
             }
+            
+            // 5. Construct Presentation (Success Case)
+            let saveSeed = runManager.lastRun?.runSeed ?? 0
+            
+            // Format time (ticks / 60)
+            let seconds = ticksSurvived / 60
+            let timeStr = String(format: "%02d:%02d", seconds / 60, seconds % 60)
+            
+            self.postRun = PostRunPresentation(
+                didWin: didWin,
+                wavesCompleted: waves,
+                totalCoins: game.currentCoins,
+                durationStats: timeStr,
+                xpGained: xpGained,
+                startLevel: startLevel,
+                endLevel: endLevel,
+                unlocks: newUnlocks,
+                saveStatus: .saved(seed: saveSeed)
+            )
+            
         } catch {
-            #if DEBUG
-            print("❌ Progression save failed: \(error)")
-            #endif
-            // Optional: Show non-blocking banner/toast to user
-            // Note: No retry allowed - applyRun is non-transactional
+            print("❌ Failed to save run: \(error)")
+            
+            // Handle Protection Error specifically
+            let nsError = error as NSError
+            let isProtected = nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoPermissionError
+            
+            // Construct Presentation (Failure Case)
+            let seconds = ticksSurvived / 60
+            let timeStr = String(format: "%02d:%02d", seconds / 60, seconds % 60)
+            
+            self.postRun = PostRunPresentation(
+                didWin: didWin,
+                wavesCompleted: waves,
+                totalCoins: game.currentCoins,
+                durationStats: timeStr,
+                xpGained: 0,
+                startLevel: runManager.profile.level,
+                endLevel: runManager.profile.level,
+                unlocks: [],
+                saveStatus: isProtected ? .protectedData : .failed(errorMessage: error.localizedDescription)
+            )
         }
     }
 }

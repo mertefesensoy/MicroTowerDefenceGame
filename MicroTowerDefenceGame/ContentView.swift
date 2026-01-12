@@ -38,7 +38,10 @@ struct GameRootView: View {
                     waveText: vm.waveText,
                     phaseText: vm.phaseText,
                     tickText: vm.currentTickText,
-                    lastAction: vm.lastAction
+                    lastAction: vm.lastAction,
+                    level: vm.level,
+                    xp: vm.xp,
+                    lastRunSeed: vm.lastRunSeed
                 )
                 .padding()
                 .background(.ultraThinMaterial)
@@ -65,6 +68,17 @@ struct GameRootView: View {
                 }
                 .padding(.bottom, 20)
             }
+            .zIndex(10) // HUD stays above game
+            
+            // Post-Run Modal Overlay
+            if let postRun = vm.postRun {
+                PostRunSummaryView(model: postRun) {
+                    vm.dismissPostRun()
+                }
+                .zIndex(100) // Modal covers everything
+                .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+            }
+        }
         }
         .onAppear {
             bridge.bind(to: vm) // Connect Bridge to VM
