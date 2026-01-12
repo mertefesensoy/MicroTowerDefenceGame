@@ -13,7 +13,11 @@ final class ProfileStoreTests: XCTestCase {
         super.setUp()
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try? FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(
+            at: tempDirectory,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
         testFileURL = tempDirectory.appendingPathComponent("profile.json")
     }
     

@@ -87,16 +87,16 @@ public final class JSONFileProfileStore: ProfileStore {
         )
         
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.prettyPrinted]
         encoder.dateEncodingStrategy = .iso8601
         
         let data = try encoder.encode(saveFile)
         
         // Atomic write: write to temp file, then replace
         let tempURL = fileURL.deletingLastPathComponent()
-            .appendingPathComponent(".\(fileURL.lastPathComponent).tmp")
+            .appendingPathComponent(".\(fileURL.lastPathComponent).\(UUID().uuidString).tmp")
         
-        try data.write(to: tempURL, options: .atomic)
+        try data.write(to: tempURL)
         
         // Replace original file (remove old, move temp)
         if FileManager.default.fileExists(atPath: fileURL.path) {
@@ -108,11 +108,25 @@ public final class JSONFileProfileStore: ProfileStore {
     // MARK: - Private Helpers
     
     private func backupCorruptFile() throws {
-        let timestamp = ISO8601DateFormatter().string(from: Date())
-        let backupURL = fileURL.deletingLastPathComponent()
-            .appendingPathComponent("profile.corrupt.\(timestamp).json")
+        // Use filename-safe timestamp (no colons for Windows compatibility)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyyMMdd-HHmmssSSS"
         
-        try? FileManager.default.copyItem(at: fileURL, to: backupURL)
+        let stamp = formatter.string(from: Date())
+        let backupURL = fileURL.deletingLastPathComponent()
+            .appendingPathComponent("profile.corrupt.\(stamp).json")
+        
+        // Move (not copy) to remove corrupt file and prevent repeated backup attempts
+        if FileManager.default.fileExists(atPath: backupURL.path) {
+            // Collision unlikely, but handle it
+            let alt = fileURL.deletingLastPathComponent()
+                .appendingPathComponent("profile.corrupt.\(stamp).\(UUID().uuidString).json")
+            try FileManager.default.moveItem(at: fileURL, to: alt)
+        } else {
+            try FileManager.default.moveItem(at: fileURL, to: backupURL)
+        }
     }
     
     private func migrate(_ saveFile: ProgressionSaveFile, to version: Int) throws -> ProgressionSaveFile {
