@@ -28,6 +28,7 @@ final class RunManagerTests: XCTestCase {
     
     // MARK: - Initialization
     
+    @MainActor
     func testInitWithMissingFileCreatesDefaultProfile() throws {
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let manager = try RunManager(store: store)
@@ -37,6 +38,7 @@ final class RunManagerTests: XCTestCase {
         XCTAssertTrue(manager.profile.unlocks.isEmpty)
     }
     
+    @MainActor
     func testInitLoadsExistingProfile() throws {
         // Create and save a profile
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
@@ -53,6 +55,7 @@ final class RunManagerTests: XCTestCase {
     
     // MARK: - Run Application
     
+    @MainActor
     func testApplyRunUpdatesProfileAndPersists() throws {
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let manager = try RunManager(store: store)
@@ -85,6 +88,7 @@ final class RunManagerTests: XCTestCase {
         XCTAssertEqual(reloadedProfile.level, 2)
     }
     
+    @MainActor
     func testApplyRunPersistsLastRunMetadata() throws {
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let manager = try RunManager(store: store)
@@ -114,6 +118,7 @@ final class RunManagerTests: XCTestCase {
         XCTAssertEqual(saveFile.lastRun?.ticksSurvived, 480)
     }
     
+    @MainActor
     func testApplyRunTriggersUnlocks() throws {
         // Seed profile through store (Profile at 390 XP, level 2, 10 XP away from level 3)
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
@@ -154,6 +159,7 @@ final class RunManagerTests: XCTestCase {
     
     // MARK: - Reset
     
+    @MainActor
     func testResetProfileClearsDataAndPersists() throws {
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let manager = try RunManager(store: store)
