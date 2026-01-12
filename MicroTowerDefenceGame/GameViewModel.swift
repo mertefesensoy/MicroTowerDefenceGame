@@ -95,6 +95,9 @@ final class GameViewModel: ObservableObject {
         
         // Update wave/phase text
         switch game.currentState {
+        case .preRun:
+            waveText = "Not Started"
+            phaseText = "Pre-Run"
         case .building(let waveIndex):
             waveText = "Wave \(waveIndex)"
             phaseText = "Building"
@@ -106,6 +109,8 @@ final class GameViewModel: ObservableObject {
             phaseText = "Choose Relic"
         case .gameOver:
             phaseText = "Game Over"
+        case .postRunSummary:
+            phaseText = "Run Complete"
         }
         
         // Update render snapshot (for Commit 3 SpriteKit)
