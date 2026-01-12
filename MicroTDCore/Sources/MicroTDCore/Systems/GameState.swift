@@ -210,8 +210,8 @@ public final class GameState {
         case .startWave(_):
             startNextWave()
             
-        case .chooseRelic(let relicID, _):
-            _ = relicSystem.chooseRelic(id: relicID)
+        case .chooseRelic(let index, _):
+            chooseRelicAtIndex(index)
             
         case .upgradeTower:
             break // TODO: implement upgrades
@@ -275,7 +275,7 @@ public final class GameState {
         guard index >= 0 && index < choices.count else { return }
         
         let chosen = choices[index]
-        relicSystem.chooseRelic(id: chosen.id)
+        _ = relicSystem.chooseRelic(id: chosen.id)
         
         eventLog.emit(.relicChosen(relicID: chosen.id, tick: currentTick))
         
