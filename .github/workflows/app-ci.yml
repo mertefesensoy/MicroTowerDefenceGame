@@ -24,10 +24,18 @@ jobs:
       - name: Generate Project
         run: xcodegen generate
         
-      - name: Build App
+      - name: Build App (Simulator, no signing)
         run: |
-          xcodebuild build \
+          set -o pipefail
+          xcodebuild \
             -project MicroTowerDefenceGame.xcodeproj \
             -scheme MicroTowerDefenceGame \
-            -destination "platform=iOS Simulator,name=iPhone 15" \
-            CODE_SIGNING_ALLOWED=NO
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
