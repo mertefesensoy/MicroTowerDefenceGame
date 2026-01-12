@@ -34,15 +34,15 @@ final class GoldenSeedTests: XCTestCase {
         
         // SNAPSHOT: spawn IDs (deterministic instance IDs)
         if case .enemySpawned(let id1, _, _, let tick1) = spawnEvents[0] {
-            XCTAssertEqual(id1, 0, "First enemy should have ID 0")
+            XCTAssertEqual(id1, 1, "First enemy should have ID 1")
             XCTAssertEqual(tick1, 0, "First spawn at tick 0")
         }
         if case .enemySpawned(let id2, _, _, let tick2) = spawnEvents[1] {
-            XCTAssertEqual(id2, 1, "Second enemy should have ID 1")
+            XCTAssertEqual(id2, 2, "Second enemy should have ID 2")
             XCTAssertEqual(tick2, 30, "Second spawn at tick 30")
         }
         if case .enemySpawned(let id3, _, _, let tick3) = spawnEvents[2] {
-            XCTAssertEqual(id3, 2, "Third enemy should have ID 2")
+            XCTAssertEqual(id3, 3, "Third enemy should have ID 3")
             XCTAssertEqual(tick3, 60, "Third spawn at tick 60")
         }
         

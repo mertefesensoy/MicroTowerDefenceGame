@@ -9,7 +9,7 @@ final class CombatTests: XCTestCase {
     func testDamageApplication() {
         // Setup
         let enemyDef = EnemyDef(id: "test", name: "Test", hp: 100, speed: 1.0, coinReward: 10, livesCost: 1, description: "Test enemy")
-        let enemy = Enemy(typeID: "test", baseDef: enemyDef)
+        let enemy = Enemy(instanceId: 1, typeID: "test", baseDef: enemyDef)
         
         XCTAssertEqual(enemy.currentHP, 100)
         XCTAssertTrue(enemy.isAlive)
@@ -23,7 +23,7 @@ final class CombatTests: XCTestCase {
     
     func testEnemyDeath() {
         let enemyDef = EnemyDef(id: "test", name: "Test", hp: 50, speed: 1.0, coinReward: 10, livesCost: 1, description: "Test")
-        let enemy = Enemy(typeID: "test", baseDef: enemyDef)
+        let enemy = Enemy(instanceId: 1, typeID: "test", baseDef: enemyDef)
         
         // Deal killing blow
         let died = enemy.takeDamage(60)
@@ -34,7 +34,7 @@ final class CombatTests: XCTestCase {
     
     func testSlowRefresh() {
         let enemyDef = EnemyDef(id: "test", name: "Test", hp: 100, speed: 2.0, coinReward: 10, livesCost: 1, description: "Test")
-        let enemy = Enemy(typeID: "test", baseDef: enemyDef)
+        let enemy = Enemy(instanceId: 1, typeID: "test", baseDef: enemyDef)
         
         // Apply first slow: 30% for 60 ticks
         enemy.applySlow(amount: 0.3, durationTicks: 60)
@@ -62,7 +62,7 @@ final class CombatTests: XCTestCase {
     
     func testSlowExpiry() {
         let enemyDef = EnemyDef(id: "test", name: "Test", hp: 100, speed: 2.0, coinReward: 10, livesCost: 1, description: "Test")
-        let enemy = Enemy(typeID: "test", baseDef: enemyDef)
+        let enemy = Enemy(instanceId: 1, typeID: "test", baseDef: enemyDef)
         
         enemy.applySlow(amount: 0.5, durationTicks: 2)
         XCTAssertNotNil(enemy.slowEffect)
@@ -91,18 +91,18 @@ final class CombatTests: XCTestCase {
         let combatSystem = CombatSystem(mapDef: mapDef)
         
         let towerDef = TowerDef(id: "test", name: "Test", cost: 100, range: 3.0, fireRate: 1.0, damage: 10, description: "Test", upgradePaths: [])
-        let tower = Tower(typeID: "test", position: GridPosition(x: 2, y: 0), baseDef: towerDef)
+        let tower = Tower(instanceId: 1, typeID: "test", position: GridPosition(x: 2, y: 0), baseDef: towerDef)
         
         let enemyDef = EnemyDef(id: "test", name: "Test", hp: 100, speed: 1.0, coinReward: 10, livesCost: 1, description: "Test")
         
-        let enemy1 = Enemy(typeID: "test", baseDef: enemyDef)
+        let enemy1 = Enemy(instanceId: 1, typeID: "test", baseDef: enemyDef)
         enemy1.move(deltaProgress: 0.2) // Progress 0.2
         
-        let enemy2 = Enemy(typeID: "test", baseDef: enemyDef)
+        let enemy2 = Enemy(instanceId: 2, typeID: "test", baseDef: enemyDef)
         enemy2.move(deltaProgress: 0.5) // Progress 0.5 (closer to end)
         
         // Should target enemy2 (highest path progress)
         let target = combatSystem.findTarget(for: tower, enemies: [enemy1, enemy2])
-        XCTAssertEqual(target?.id, enemy2.id, "Should target enemy with highest path progress")
+        XCTAssertEqual(target?.instanceId, enemy2.instanceId, "Should target enemy with highest path progress")
     }
 }
