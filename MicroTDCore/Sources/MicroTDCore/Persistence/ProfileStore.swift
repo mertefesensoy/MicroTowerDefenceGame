@@ -30,9 +30,15 @@ public final class JSONFileProfileStore: ProfileStore {
     private let corruptPolicy: CorruptProfilePolicy
     private let logger: (any ProfileStoreLogger)?
     
+    /// Create a JSON file-based profile store
+    /// - Parameters:
+    ///   - fileURL: Absolute path to profile.json file
+    ///   - corruptPolicy: How to handle corrupt/unparseable files (REQUIRED - no default)
+    ///   - logger: Optional logger for visibility into operations
+    /// - Warning: Corruption policy must be chosen explicitly based on your product's data recovery UX
     public init(
         fileURL: URL,
-        corruptPolicy: CorruptProfilePolicy = .resetToDefaultAndBackup,
+        corruptPolicy: CorruptProfilePolicy,
         logger: (any ProfileStoreLogger)? = nil
     ) {
         self.fileURL = fileURL

@@ -224,7 +224,9 @@ public final class GameState {
     
     private func placeTower(type: String, at position: GridPosition) {
         guard case .building = stateMachine.state else {
+            #if DEBUG
             assertionFailure("placeTower called in illegal state: \(stateMachine.state)")
+            #endif
             return
         }
         guard let towerDef = definitions.towers.tower(withID: type) else { return }
@@ -252,7 +254,9 @@ public final class GameState {
     
     private func sellTower(at position: GridPosition) {
         guard case .building = stateMachine.state else {
+            #if DEBUG
             assertionFailure("sellTower called in illegal state: \(stateMachine.state)")
+            #endif
             return
         }
         guard let tower = towerGrid[position] else { return }
@@ -269,7 +273,9 @@ public final class GameState {
     
     private func startNextWave() {
         guard case .building(let waveIndex) = stateMachine.state else {
+            #if DEBUG
             assertionFailure("startNextWave called in illegal state: \(stateMachine.state)")
+            #endif
             return
         }
         
@@ -281,7 +287,9 @@ public final class GameState {
     
     private func chooseRelicAtIndex(_ index: Int) {
         guard case .relicChoice(let waveIndex) = stateMachine.state else {
+            #if DEBUG
             assertionFailure("chooseRelicAtIndex called in illegal state: \(stateMachine.state)")
+            #endif
             return
         }
         

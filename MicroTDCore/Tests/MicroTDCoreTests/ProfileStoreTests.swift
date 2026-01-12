@@ -29,7 +29,7 @@ final class ProfileStoreTests: XCTestCase {
     // MARK: - Core Functionality
     
     func testLoadMissingFileReturnsDefaultProfile() throws {
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let rules = ProgressionRules()
         
         let profile = try store.load(rules: rules)
@@ -40,7 +40,7 @@ final class ProfileStoreTests: XCTestCase {
     }
     
     func testSaveThenLoadRoundTrip() throws {
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let rules = ProgressionRules()
         
         var originalProfile = ProgressionProfile(
@@ -71,7 +71,7 @@ final class ProfileStoreTests: XCTestCase {
     }
     
     func testAtomicWriteCreatesValidJSON() throws {
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let profile = ProgressionProfile(xp: 100, level: 2, unlocks: ["relic_uncommon_pack"])
         
         try store.save(profile, lastRun: nil)
@@ -164,7 +164,7 @@ final class ProfileStoreTests: XCTestCase {
             unlocks: ["relic_uncommon_pack"] // Missing tower_sniper, relic_rare_pack, tower_missile
         )
         
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         try store.save(incompleteProfile, lastRun: nil)
         
         // Load with reconciliation
@@ -185,7 +185,7 @@ final class ProfileStoreTests: XCTestCase {
     // MARK: - Schema Versioning Scaffold
     
     func testLoadHandlesCurrentSchemaVersion() throws {
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let rules = ProgressionRules()
         let profile = ProgressionProfile(xp: 100, level: 2, unlocks: [])
         

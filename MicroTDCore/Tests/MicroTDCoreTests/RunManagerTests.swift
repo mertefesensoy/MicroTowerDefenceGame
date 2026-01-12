@@ -29,7 +29,7 @@ final class RunManagerTests: XCTestCase {
     // MARK: - Initialization
     
     func testInitWithMissingFileCreatesDefaultProfile() throws {
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let manager = try RunManager(store: store)
         
         XCTAssertEqual(manager.profile.xp, 0)
@@ -39,7 +39,7 @@ final class RunManagerTests: XCTestCase {
     
     func testInitLoadsExistingProfile() throws {
         // Create and save a profile
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let existingProfile = ProgressionProfile(xp: 250, level: 2, unlocks: ["relic_uncommon_pack"])
         try store.save(existingProfile, lastRun: nil)
         
@@ -54,7 +54,7 @@ final class RunManagerTests: XCTestCase {
     // MARK: - Run Application
     
     func testApplyRunUpdatesProfileAndPersists() throws {
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let manager = try RunManager(store: store)
         
         // Run worth 150 XP (should level up from 1 to 2)
@@ -86,7 +86,7 @@ final class RunManagerTests: XCTestCase {
     }
     
     func testApplyRunPersistsLastRunMetadata() throws {
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let manager = try RunManager(store: store)
         
         let summary = RunSummary(
@@ -116,7 +116,7 @@ final class RunManagerTests: XCTestCase {
     
     func testApplyRunTriggersUnlocks() throws {
         // Seed profile through store (Profile at 390 XP, level 2, 10 XP away from level 3)
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         try store.save(
             ProgressionProfile(
                 xp: 390,
@@ -155,7 +155,7 @@ final class RunManagerTests: XCTestCase {
     // MARK: - Reset
     
     func testResetProfileClearsDataAndPersists() throws {
-        let store = JSONFileProfileStore(fileURL: testFileURL)
+        let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let manager = try RunManager(store: store)
         
         // Apply a run to modify profile
