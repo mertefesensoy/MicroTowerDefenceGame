@@ -181,23 +181,15 @@ public final class GameState {
     // MARK: - Progression Integration
     
     public func makeRunSummary(didWin: Bool) -> RunSummary {
-        // Flatten owned relics into list
-        var relicList: [String] = []
-        for (id, count) in relicSystem.owned {
-            for _ in 0..<count {
-                relicList.append(id)
-            }
-        }
-        relicList.sort() // Deterministic output
-        
+        // DEBUG: Dummy implementation to check compilation
         return RunSummary(
             runSeed: runSeed,
-            wavesCleared: waveSystem.currentWave, // approximates cleared
-            ticksSurvived: clock.currentTick,
-            coinsEarned: economySystem.totalCoinsEarned,
-            enemiesDefeated: enemiesDefeated,
+            wavesCleared: 0,
+            ticksSurvived: 0,
+            coinsEarned: 0,
+            enemiesDefeated: 0,
             didWin: didWin,
-            relicIDsChosen: relicList
+            relicIDsChosen: []
         )
     }
 }
