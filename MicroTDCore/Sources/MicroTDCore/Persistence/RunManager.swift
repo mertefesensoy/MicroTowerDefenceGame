@@ -32,6 +32,16 @@ public final class RunManager<Store: ProfileStore> {
     /// - Returns: Events generated (XP gained, level ups, unlocks)
     /// - Throws: If save fails
     public func applyRun(_ summary: RunSummary) throws -> [ProgressionEvent] {
+        // Idempotency: reject duplicate runSeeds (prevents double-award)
+        if let lastRun = store.load()?.lastRun,
+           lastRun.runSeed == summary.runSeed {
+            // This run was already processed - no-op
+            #if DEBUG
+            print("⚠️ RunManager: Duplicate runSeed \(summary.runSeed) detected - skipping")
+            #endif
+            return []
+        }
+        
         // Apply progression logic
         let events = progressionSystem.applyRun(summary, to: &profile)
         

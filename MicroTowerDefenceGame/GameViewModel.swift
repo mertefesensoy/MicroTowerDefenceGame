@@ -14,7 +14,6 @@ final class GameViewModel: ObservableObject {
     
     // Progression tracking
     private var didFinalizeCurrentRun = false
-    private var pendingDidWin: Bool = false  // Store didWin from terminal event
     
     // Timer
     private var timer: AnyCancellable?
@@ -86,8 +85,7 @@ final class GameViewModel: ObservableObject {
         let newEvents = game.eventLog.slice(from: lastEventIndex)
         lastEventIndex = game.eventLog.events.count
         
-        var sawGameOverEvent = false
-        var sawRunCompletedEvent = false
+        var terminalOutcome: Bool? = nil
         
         // Track last action for debugging + detect terminal events
         for event in newEvents {
@@ -97,11 +95,19 @@ final class GameViewModel: ObservableObject {
             case .towerSold(let id, let refund, _):
                 lastAction = "Tower sold (ID: \(id), refund: \(refund))"
             case .gameOver:
-                sawGameOverEvent = true
-                pendingDidWin = false
+                #if DEBUG
+                if let existing = terminalOutcome {
+                    assertionFailure("Multiple terminal events: didWin=\(existing) then .gameOver")
+                }
+                #endif
+                terminalOutcome = false
             case .runCompleted:
-                sawRunCompletedEvent = true
-                pendingDidWin = true
+                #if DEBUG
+                if let existing = terminalOutcome {
+                    assertionFailure("Multiple terminal events: didWin=\(existing) then .runCompleted")
+                }
+                #endif
+                terminalOutcome = true
             default:
                 break
             }
@@ -113,8 +119,8 @@ final class GameViewModel: ObservableObject {
         currentTickText = "Tick: \(game.currentTick)"
         
         // ✅ Finalize exactly once when Core emits terminal event
-        if sawGameOverEvent || sawRunCompletedEvent {
-            finalizeRunIfNeeded(didWin: pendingDidWin)
+        if let didWin = terminalOutcome {
+            finalizeRunIfNeeded(didWin: didWin)
         }
         
         // Update wave/phase text
