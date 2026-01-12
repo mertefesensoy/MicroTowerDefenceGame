@@ -210,8 +210,8 @@ public final class GameState {
         case .startWave(_):
             startNextWave()
             
-        case .chooseRelic(let index, _):
-            chooseRelicAtIndex(index)
+        case .chooseRelic(let relicID, _):
+            _ = relicSystem.chooseRelic(id: relicID)
             
         case .upgradeTower:
             break // TODO: implement upgrades

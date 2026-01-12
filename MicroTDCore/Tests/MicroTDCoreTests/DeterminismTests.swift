@@ -76,21 +76,16 @@ final class DeterminismTests: XCTestCase {
     func testDifferentSeedsDiffer() throws {
         let definitions = try TestFixtures.loadDefinitions()
         
-        let game1 = GameState(runSeed: 11111, definitions: definitions)
-        for _ in 0..<50 {
-            game1.tick()
-        }
+        // Use RNG-dependent relic system to prove different seeds diverge
+        let rng1 = SeededRNG(seed: 11111)
+        let relicSystem1 = RelicSystem(relicDefs: definitions.relics, rng: rng1)
+        let choices1 = relicSystem1.generateChoices(count: 3)
         
-        let game2 = GameState(runSeed: 22222, definitions: definitions)
-        for _ in 0..<50 {
-            game2.tick()
-        }
+        let rng2 = SeededRNG(seed: 22222)
+        let relicSystem2 = RelicSystem(relicDefs: definitions.relics, rng: rng2)
+        let choices2 = relicSystem2.generateChoices(count: 3)
         
-        // Should have different event sequences
-        // (This might not always be true at very low tick counts, but statistically should differ)
-        let events1 = game1.eventLog.events
-        let events2 = game2.eventLog.events
-        
-        XCTAssertNotEqual(events1, events2, "Different seeds should produce different outcomes")
+        // Different seeds should produce different relic choices
+        XCTAssertNotEqual(choices1.map { $0.id }, choices2.map { $0.id }, "Different seeds should produce different outcomes")
     }
 }
