@@ -14,7 +14,7 @@ public struct RelicDatabase: Sendable {
     
     // Convenience for GameDefinitions
     public init(definitions: RelicDefinitions) {
-        self.init(relicDefs: definitions.all)
+        self.init(relicDefs: definitions.relics)
     }
     
     public func relic(id: String) -> RelicDef? {
