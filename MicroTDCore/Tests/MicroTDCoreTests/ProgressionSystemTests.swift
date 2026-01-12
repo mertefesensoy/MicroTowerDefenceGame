@@ -11,7 +11,7 @@ final class ProgressionSystemTests: XCTestCase {
     func testXPFormula() {
         // Run: 10 waves, 600 ticks (10s), 100 coins, 20 kills, Win
         let summary = RunSummary(
-            runSeed: 1,
+            runSeed: UInt64(1),
             wavesCleared: 10,
             ticksSurvived: 600,
             coinsEarned: 100,
@@ -39,7 +39,7 @@ final class ProgressionSystemTests: XCTestCase {
         
         // Run worth 150 XP
         let summary = RunSummary(
-            runSeed: 1,
+            runSeed: UInt64(1),
             wavesCleared: 0,
             ticksSurvived: 0,
             coinsEarned: 0,
@@ -74,7 +74,7 @@ final class ProgressionSystemTests: XCTestCase {
         // 500 < 900 (Level 3 req). Stop.
         
         let summary = RunSummary(
-            runSeed: 1,
+            runSeed: UInt64(1),
             wavesCleared: 0,
             ticksSurvived: 0,
             coinsEarned: 0,
@@ -97,7 +97,7 @@ final class ProgressionSystemTests: XCTestCase {
         // Needs 400 for Level 3.
         // Run worth 10 XP.
         let summary = RunSummary(
-            runSeed: 1,
+            runSeed: UInt64(1),
             wavesCleared: 0,
             ticksSurvived: 0,
             coinsEarned: 0,
