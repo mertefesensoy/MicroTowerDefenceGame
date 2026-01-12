@@ -15,6 +15,7 @@ public protocol ProfileStoreLogger {
 import os
 
 /// Default logger using os.log (Apple platforms only)
+@available(macOS 11.0, iOS 14.0, *)
 public struct OSLogProfileStoreLogger: ProfileStoreLogger {
     private let logger = Logger(subsystem: "com.microtd.core", category: "ProfileStore")
     
