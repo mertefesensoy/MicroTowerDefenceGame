@@ -22,24 +22,18 @@ public struct OSLogProfileStoreLogger: ProfileStoreLogger {
     public init() {}
     
     public func didLoad(schemaVersion: Int, fileURL: URL, profileLevel: Int, profileXP: Int) {
-        if #available(macOS 11.0, iOS 14.0, *) {
-            logger.info("Loaded profile: schema=\(schemaVersion), level=\(profileLevel), xp=\(profileXP), path=\(fileURL.lastPathComponent, privacy: .private)")
-        }
+        logger.info("Loaded profile: schema=\(schemaVersion), level=\(profileLevel), xp=\(profileXP), path=\(fileURL.lastPathComponent, privacy: .private)")
     }
     
     public func didSave(schemaVersion: Int, fileURL: URL, profileLevel: Int, profileXP: Int) {
-        if #available(macOS 11.0, iOS 14.0, *) {
-            logger.info("Saved profile: schema=\(schemaVersion), level=\(profileLevel), xp=\(profileXP), path=\(fileURL.lastPathComponent, privacy: .private)")
-        }
+        logger.info("Saved profile: schema=\(schemaVersion), level=\(profileLevel), xp=\(profileXP), path=\(fileURL.lastPathComponent, privacy: .private)")
     }
     
     public func didHandleCorruption(policy: CorruptProfilePolicy, fileURL: URL, backupURL: URL?) {
-        if #available(macOS 11.0, iOS 14.0, *) {
-            if let backup = backupURL {
-                logger.warning("Corruption detected (policy=\(String(describing: policy))): backed up to \(backup.lastPathComponent, privacy: .private)")
-            } else {
-                logger.warning("Corruption detected (policy=\(String(describing: policy))): no backup created")
-            }
+        if let backup = backupURL {
+            logger.warning("Corruption detected (policy=\(String(describing: policy))): backed up to \(backup.lastPathComponent, privacy: .private)")
+        } else {
+            logger.warning("Corruption detected (policy=\(String(describing: policy))): no backup created")
         }
     }
 }
