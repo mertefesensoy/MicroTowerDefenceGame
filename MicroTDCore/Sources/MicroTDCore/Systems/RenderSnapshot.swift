@@ -5,7 +5,7 @@
 import Foundation
 
 /// Render-only enemy data (id + position)
-public struct RenderEnemy {
+public struct RenderEnemy: Equatable {
     public let id: Int
     public let type: String
     public let pathProgress: Double
@@ -18,7 +18,7 @@ public struct RenderEnemy {
 }
 
 /// Render-only tower data (id + grid position)
-public struct RenderTower {
+public struct RenderTower: Equatable {
     public let id: Int
     public let type: String
     public let gridX: Int
@@ -33,7 +33,7 @@ public struct RenderTower {
 }
 
 /// Complete render snapshot (no gameplay state, only what Sprite needs to render)
-public struct RenderSnapshot {
+public struct RenderSnapshot: Equatable {
     public let enemies: [RenderEnemy]
     public let towers: [RenderTower]
     
