@@ -44,8 +44,8 @@ struct SettingsSheet: View {
                 } header: {
                     Text("Danger Zone")
                 } footer: {
-                    if let seed = vm.lastRunSeed, seed != "-" {
-                        Text("Last Run Seed: \(seed)")
+                    if vm.lastRunSeed != "-" {
+                        Text("Last Run Seed: \(vm.lastRunSeed)")
                     }
                 }
                 

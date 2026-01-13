@@ -39,9 +39,18 @@ final class GameViewModel: ObservableObject {
     init(runManager: RunManager<JSONFileProfileStore>, toastManager: ToastManager) {
         self.runManager = runManager
         self.toastManager = toastManager
+        
+        // Load definitions from bundle
+        let definitions: GameDefinitions
+        do {
+            definitions = try GameDefinitions.loadFromBundle()
+        } catch {
+            fatalError("Failed to load game definitions: \(error)")
+        }
+        
         // Initialize with default GameState
         // Use a random seed for the first game loop
-        self.game = GameState(runSeed: UInt64.random(in: 0...UInt64.max))
+        self.game = GameState(runSeed: UInt64.random(in: 0...UInt64.max), definitions: definitions)
         
         // Initial sync
         self.coins = game.currentCoins
