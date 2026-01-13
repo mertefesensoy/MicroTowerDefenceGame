@@ -24,6 +24,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         ENABLE_PREVIEWS: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
       configs:
         Debug:
           CODE_SIGNING_ALLOWED: NO

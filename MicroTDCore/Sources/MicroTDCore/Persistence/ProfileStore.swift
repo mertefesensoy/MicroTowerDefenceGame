@@ -23,6 +23,9 @@ public protocol ProfileStore {
     
     /// Save profile to storage with optional last run metadata
     func save(_ profile: ProgressionProfile, lastRun: LastRunMetadata?) throws
+    
+    /// Reset the persisted profile (e.g. delete file)
+    func reset() throws
 }
 
 /// JSON file-based profile store with atomic writes and corruption handling
@@ -203,6 +206,13 @@ public final class JSONFileProfileStore: ProfileStore {
             profileLevel: profile.level,
             profileXP: profile.xp
         )
+    }
+    
+    public func reset() throws {
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.removeItem(at: fileURL)
+            logger?.didHandleCorruption(policy: .resetToDefaultSilently, fileURL: fileURL, backupURL: nil) // Reusing log for deletion? Maybe add distinct log method later. For now, just delete.
+        }
     }
     
     // MARK: - Private Helpers

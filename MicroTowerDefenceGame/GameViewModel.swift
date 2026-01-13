@@ -10,48 +10,40 @@ final class GameViewModel: ObservableObject {
     // Core simulation
     private var game: GameState
     private let runManager: RunManager<JSONFileProfileStore>
+    private let toastManager: ToastManager
     private var lastEventIndex: Int = 0
     
     // Progression tracking
     private var didFinalizeCurrentRun = false
+    @Published var isPaused: Bool = false
     
     // Timer
     private var timer: AnyCancellable?
     
-    // Published HUD state
-    @Published var coins: Int = 0
-    @Published var lives: Int = 0
-    @Published var waveText: String = "Wave 0"
-    @Published var phaseText: String = "Building"
-    @Published var renderSnapshot: RenderSnapshot = RenderSnapshot(enemies: [], towers: [])
-    
-    // Debug state
-    @Published var currentTickText: String = "Tick: 0"
-    @Published var lastAction: String = "None"
-    @Published var level: Int = 1
-    @Published var xp: Int = 0
-    @Published var lastRunSeed: String = "-"
-    
-    init(runManager: RunManager<JSONFileProfileStore>) {
-        self.runManager = runManager
-        
-        // Load definitions and create game state
-        do {
-            let definitions = try GameDefinitions.loadFromBundle()
-            self.game = GameState(runSeed: UInt64.random(in: 0...UInt64.max), definitions: definitions)
-            
-            // Initial update (prevents HUD showing 0s on launch)
-            updateFromCore()
-        } catch {
-            fatalError("Failed to load game definitions: \(error)")
-        }
-    }
+    // ...
     
     // MARK: - Public Interface
     
+    /// Pause the game loop (lifecycle or user initiated)
+    func pause() {
+        guard !isPaused else { return }
+        isPaused = true
+        stop() // Cancel timer
+    }
+    
+    /// Resume the game loop
+    func resume() {
+        guard isPaused else { return }
+        // Don't resume if post-run summary is showing
+        guard postRun == nil else { return }
+        
+        isPaused = false
+        start() // Restart timer
+    }
+    
     /// Start the 60Hz tick loop (idempotent - prevents double-start)
     func start() {
-        guard timer == nil else { return }
+        guard timer == nil, !isPaused else { return }
         timer = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -67,6 +59,7 @@ final class GameViewModel: ObservableObject {
     
     /// Send a command to Core
     func send(_ command: GameCommand) {
+        guard !isPaused else { return } // Input guard
         game.processCommand(command)
         updateFromCore()
     }
@@ -94,7 +87,8 @@ final class GameViewModel: ObservableObject {
         lastEventIndex = 0
         updateFromCore()
         
-        // Restart timer
+        // Reset pause state and restart
+        isPaused = false
         start()
     }
     
@@ -195,6 +189,9 @@ final class GameViewModel: ObservableObject {
         guard !didFinalizeCurrentRun else { return }
         didFinalizeCurrentRun = true
         
+        // Stop the game loop immediately
+        pause()
+        
         // 1. Capture final ticks
         let ticksSurvived = game.currentTick
         
@@ -202,95 +199,97 @@ final class GameViewModel: ObservableObject {
         // Use GameState helper to ensure all fields (coins, relics) are populated
         let summary = game.makeRunSummary(didWin: didWin)
         
-        do {
-            // 3. Apply Progression (Persistent Write)
-            // Returns events (deltas)
-            let startLevel = runManager.profile.level
-            let events = try runManager.applyRun(summary)
-            let endLevel = runManager.profile.level
-            
-            // 4. Extract rewards
-            var xpGained = 0
-            var newUnlocks: [String] = []
-            
-            for event in events {
-                switch event {
-                case .xpGained(let amount):
-                    xpGained += amount
-                case .unlocked(let id):
-                    newUnlocks.append(id)
-                case .leveledUp:
-                    break
+        // 3. Process Progression (Async)
+        Task {
+            do {
+                // Capture Snapshot Start
+                let startLevel = runManager.profile.level
+                let totalStartXP = runManager.profile.xp 
+                
+                // Apply Run (Async IO)
+                let events = try await runManager.applyRun(summary)
+                
+                // Capture Snapshot End
+                let endLevel = runManager.profile.level
+                let totalEndXP = runManager.profile.xp
+                
+                // Extract metrics
+                let xpGained = events.reduce(0) { sum, event in
+                    if case .xpGained(let amount) = event { return sum + amount }
+                    return sum
                 }
+                
+                let newUnlocks: [UnlockID] = events.compactMap { event in
+                    if case .unlocked(let id) = event { return id }
+                    return nil
+                }
+                
+                // Calculate Fractions
+                let rules = ProgressionRules.default
+                
+                // Start Fraction
+                let startFloor = rules.xpThreshold(forLevel: startLevel)
+                let startCeiling = rules.xpThreshold(forLevel: startLevel + 1)
+                let startRange = Double(max(1, startCeiling - startFloor))
+                let effectiveStartXP = totalEndXP - xpGained
+                let startFraction = Double(effectiveStartXP - startFloor) / startRange
+                
+                // End Fraction
+                let endFloor = rules.xpThreshold(forLevel: endLevel)
+                let endCeiling = rules.xpThreshold(forLevel: endLevel + 1)
+                let endRange = Double(max(1, endCeiling - endFloor))
+                let endFraction = Double(totalEndXP - endFloor) / endRange
+                
+                // Construct Presentation (Success)
+                let saveSeed = runManager.lastRun?.runSeed ?? 0
+                let seconds = ticksSurvived / 60
+                let timeStr = String(format: "%02d:%02d", seconds / 60, seconds % 60)
+                
+                self.postRun = PostRunPresentation(
+                    didWin: didWin,
+                    wavesCompleted: waves,
+                    totalCoins: game.currentCoins,
+                    durationStats: timeStr,
+                    xpGained: xpGained,
+                    startLevel: startLevel,
+                    endLevel: endLevel,
+                    startFraction: max(0, min(1, startFraction)),
+                    endFraction: max(0, min(1, endFraction)),
+                    unlocks: newUnlocks,
+                    saveStatus: .saved(seed: saveSeed)
+                )
+                
+            } catch {
+                print("❌ Failed to save run: \(error)")
+                
+                // Handle Protection Error
+                let nsError = error as NSError
+                let isProtected = nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoPermissionError
+                
+                if isProtected {
+                    toastManager.showProtectedDataWarning()
+                } else {
+                    toastManager.showSaveFailure(error.localizedDescription)
+                }
+                
+                // Construct Presentation (Failure)
+                let seconds = ticksSurvived / 60
+                let timeStr = String(format: "%02d:%02d", seconds / 60, seconds % 60)
+                
+                self.postRun = PostRunPresentation(
+                    didWin: didWin,
+                    wavesCompleted: waves,
+                    totalCoins: game.currentCoins,
+                    durationStats: timeStr,
+                    xpGained: 0,
+                    startLevel: runManager.profile.level,
+                    endLevel: runManager.profile.level,
+                    startFraction: 0,
+                    endFraction: 0,
+                    unlocks: [],
+                    saveStatus: isProtected ? .protectedData : .failed(errorMessage: error.localizedDescription)
+                )
             }
-            
-            // 5. Construct Presentation (Success Case)
-            let saveSeed = runManager.lastRun?.runSeed ?? 0
-            
-            // Format time (ticks / 60)
-            let seconds = ticksSurvived / 60
-            let timeStr = String(format: "%02d:%02d", seconds / 60, seconds % 60)
-            
-            // Calculate fractions
-            let rules = ProgressionRules() // Default rules
-            
-            // Start state
-            let startFloor = rules.xpThreshold(forLevel: startLevel)
-            let startCeiling = rules.xpThreshold(forLevel: startLevel + 1)
-            let startRange = Double(max(1, startCeiling - startFloor))
-            // Current XP before run = startFloor? No.
-            // Wait, profile stores TOTAL XP.
-            // So startXP = runManager.profile.xp is the END XP.
-            // We need startXP = endXP - xpGained.
-            let totalEndXP = runManager.profile.xp
-            let totalStartXP = totalEndXP - xpGained
-            
-            let startFraction = Double(totalStartXP - startFloor) / startRange
-            
-            // End state
-            let endFloor = rules.xpThreshold(forLevel: endLevel)
-            let endCeiling = rules.xpThreshold(forLevel: endLevel + 1)
-            let endRange = Double(max(1, endCeiling - endFloor))
-            let endFraction = Double(totalEndXP - endFloor) / endRange
-            
-            self.postRun = PostRunPresentation(
-                didWin: didWin,
-                wavesCompleted: waves,
-                totalCoins: game.currentCoins,
-                durationStats: timeStr,
-                xpGained: xpGained,
-                startLevel: startLevel,
-                endLevel: endLevel,
-                startFraction: max(0, min(1, startFraction)),
-                endFraction: max(0, min(1, endFraction)),
-                unlocks: newUnlocks,
-                saveStatus: .saved(seed: saveSeed)
-            )
-            
-        } catch {
-            print("❌ Failed to save run: \(error)")
-            
-            // Handle Protection Error specifically
-            let nsError = error as NSError
-            let isProtected = nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoPermissionError
-            
-            // Construct Presentation (Failure Case)
-            let seconds = ticksSurvived / 60
-            let timeStr = String(format: "%02d:%02d", seconds / 60, seconds % 60)
-            
-            self.postRun = PostRunPresentation(
-                didWin: didWin,
-                wavesCompleted: waves,
-                totalCoins: game.currentCoins,
-                durationStats: timeStr,
-                xpGained: 0,
-                startLevel: runManager.profile.level,
-                endLevel: runManager.profile.level,
-                startFraction: 0,
-                endFraction: 0,
-                unlocks: [],
-                saveStatus: isProtected ? .protectedData : .failed(errorMessage: error.localizedDescription)
-            )
         }
     }
 }

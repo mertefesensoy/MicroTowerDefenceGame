@@ -32,4 +32,9 @@ final class GameBridge: ObservableObject {
     func apply(snapshot: RenderSnapshot) {
         scene.apply(snapshot: snapshot)
     }
+    
+    // State: Pause/Resume
+    func setPaused(_ paused: Bool) {
+        scene.isPaused = paused
+    }
 }

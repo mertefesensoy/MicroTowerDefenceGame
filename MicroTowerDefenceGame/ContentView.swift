@@ -10,16 +10,30 @@ struct ContentView: View {
     @StateObject private var bridge = GameBridge()
     
     var body: some View {
-        GameRootView(runManager: appState.runManager, bridge: bridge)
+        if let runManager = appState.runManager {
+            GameRootView(runManager: runManager, toastManager: appState.toastManager, bridge: bridge)
+        } else {
+            // Loading / Splash Screen
+            ZStack {
+                Color.black.ignoresSafeArea()
+                ProgressView("Loading Profile...")
+                    .foregroundStyle(.white)
+                    .tint(.white)
+            }
+        }
     }
 }
 
 struct GameRootView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var vm: GameViewModel
     let bridge: GameBridge
     
-    init(runManager: RunManager<JSONFileProfileStore>, bridge: GameBridge) {
-        _vm = StateObject(wrappedValue: GameViewModel(runManager: runManager))
+    @EnvironmentObject private var appState: AppState // Need access for settings
+    @State private var showSettings = false
+    
+    init(runManager: RunManager<JSONFileProfileStore>, toastManager: ToastManager, bridge: GameBridge) {
+        _vm = StateObject(wrappedValue: GameViewModel(runManager: runManager, toastManager: toastManager))
         self.bridge = bridge
     }
     
@@ -32,20 +46,38 @@ struct GameRootView: View {
             
             // HUD Overlay
             VStack {
-                HUDView(
-                    coins: vm.coins,
-                    lives: vm.lives,
-                    waveText: vm.waveText,
-                    phaseText: vm.phaseText,
-                    tickText: vm.currentTickText,
-                    lastAction: vm.lastAction,
-                    level: vm.level,
-                    xp: vm.xp,
-                    lastRunSeed: vm.lastRunSeed
-                )
-                .padding()
-                .background(.ultraThinMaterial)
-                .cornerRadius(12)
+                HStack(alignment: .top) {
+                    // HUD Metrics
+                    HUDView(
+                        coins: vm.coins,
+                        lives: vm.lives,
+                        waveText: vm.waveText,
+                        phaseText: vm.phaseText,
+                        tickText: vm.currentTickText,
+                        lastAction: vm.lastAction,
+                        level: vm.level,
+                        xp: vm.xp,
+                        lastRunSeed: vm.lastRunSeed
+                    )
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(12)
+                    
+                    Spacer()
+                    
+                    // Settings Gear
+                    Button {
+                        vm.pause() // Pause when opening settings
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                            .padding(12)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                    }
+                }
                 .padding()
                 
                 Spacer()
@@ -56,7 +88,7 @@ struct GameRootView: View {
                         vm.send(.startWave(tick: vm.currentTick))
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(vm.phaseText == "Phase: In Wave")
+                    .disabled(vm.phaseText == "In Wave")
                     
                     // Note: Tower placement is now handled by Tapping the SpriteView
                     Text("Tap Grid to Place Cannon")
@@ -69,6 +101,9 @@ struct GameRootView: View {
                 .padding(.bottom, 20)
             }
             .zIndex(10) // HUD stays above game
+            .sheet(isPresented: $showSettings) {
+                SettingsSheet(appState: appState, vm: vm)
+            }
             
             // Post-Run Modal Overlay
             if let postRun = vm.postRun {
@@ -77,6 +112,28 @@ struct GameRootView: View {
                 }
                 .zIndex(100) // Modal covers everything
                 .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+            }
+            
+            // Toast Overlay (Highest Layer, Non-Blocking)
+            ToastOverlay(manager: appState.toastManager)
+                .zIndex(200)
+                
+            // Simple Pause Overlay
+            if vm.isPaused && vm.postRun == nil {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .overlay(
+                        Text("PAUSED")
+                            .font(.largeTitle.bold())
+                            .foregroundStyle(.white)
+                            .padding()
+                            .background(Color.black.opacity(0.6))
+                            .cornerRadius(12)
+                    )
+                    .onTapGesture {
+                        vm.resume()
+                    }
+                    .zIndex(150)
             }
         }
         .onAppear {
@@ -92,6 +149,24 @@ struct GameRootView: View {
         // Drive rendering from VM updates
         .onChange(of: vm.renderSnapshot) { newSnapshot in
             bridge.apply(snapshot: newSnapshot)
+        }
+        // Lifecycle Sync
+        .onChange(of: scenePhase) { phase in
+            switch phase {
+            case .active:
+                // Resume only if not in post-run summary
+                if vm.postRun == nil {
+                     vm.resume()
+                }
+            case .inactive, .background:
+                vm.pause()
+            @unknown default:
+                break
+            }
+        }
+        // Bridge Sync
+        .onChange(of: vm.isPaused) { paused in
+            bridge.setPaused(paused)
         }
     }
 }

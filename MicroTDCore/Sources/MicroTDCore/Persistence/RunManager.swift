@@ -7,43 +7,62 @@ import Foundation
 /// - Note: MainActor-isolated to prevent concurrent saves and ensure deterministic profile updates
 @MainActor
 public final class RunManager<Store: ProfileStore> {
-    private let store: Store
+    private let io: ProfileStoreIO<Store>
     private let rules: ProgressionRules
     private let progressionSystem: ProgressionSystem
     
     public private(set) var profile: ProgressionProfile
-    public private(set) var lastRun: LastRunMetadata?  // Track last processed run for idempotency
+    public private(set) var lastRun: LastRunMetadata?
     
-    /// Initialize RunManager and load existing profile
-    /// - Parameters:
-    ///   - store: Profile storage backend
-    ///   - rules: Progression rules for XP/unlocks
-    /// - Throws: If loading fails and corruption policy is `.throwError`
-    public init(store: Store, rules: ProgressionRules = ProgressionRules()) throws {
-        self.store = store
+    // Guard against re-entrant saves (since await yields the thread)
+    private var inFlightRunSeeds = Set<UInt64>()
+    
+    // Private init - forces use of async factory
+    private init(
+        io: ProfileStoreIO<Store>,
+        rules: ProgressionRules,
+        profile: ProgressionProfile,
+        lastRun: LastRunMetadata?
+    ) {
+        self.io = io
         self.rules = rules
         self.progressionSystem = ProgressionSystem(rules: rules)
-        
-        // Load profile and metadata
-        let (profile, lastRun) = try store.load(rules: rules)
         self.profile = profile
         self.lastRun = lastRun
+    }
+    
+    /// Async factory to initialize RunManager (loads profile off-main)
+    public static func make(store: Store, rules: ProgressionRules = ProgressionRules()) async throws -> RunManager {
+        let io = ProfileStoreIO(store)
+        let (profile, lastRun) = try await io.load(rules: rules)
+        return RunManager(io: io, rules: rules, profile: profile, lastRun: lastRun)
     }
     
     /// Apply a completed run to the profile and persist
     /// - Parameter summary: Run results to process
     /// - Returns: Events generated (XP gained, level ups, unlocks)
     /// - Throws: If save fails
-    public func applyRun(_ summary: RunSummary) throws -> [ProgressionEvent] {
+    public func applyRun(_ summary: RunSummary) async throws -> [ProgressionEvent] {
         // Idempotency: reject duplicate runSeeds (prevents double-award)
-        if let lastRun = lastRun, lastRun.runSeed == summary.runSeed {
+        if let lastRun, lastRun.runSeed == summary.runSeed {
             #if DEBUG
             print("⚠️ RunManager: Duplicate runSeed \(summary.runSeed) detected - skipping")
             #endif
             return []
         }
         
-        // Compute-then-commit pattern (for save safety)
+        // Re-entrancy guard
+        if inFlightRunSeeds.contains(summary.runSeed) {
+            #if DEBUG
+            print("⚠️ RunManager: RunSeed \(summary.runSeed) already in-flight - skipping")
+            #endif
+            return []
+        }
+        
+        inFlightRunSeeds.insert(summary.runSeed)
+        defer { inFlightRunSeeds.remove(summary.runSeed) }
+        
+        // Compute-then-commit pattern
         var newProfile = profile
         let events = progressionSystem.applyRun(summary, to: &newProfile)
         
@@ -55,8 +74,8 @@ public final class RunManager<Store: ProfileStore> {
             ticksSurvived: summary.ticksSurvived
         )
         
-        // Persist updated profile first
-        try store.save(newProfile, lastRun: newLastRun)
+        // Persist updated profile off-main
+        try await io.save(newProfile, lastRun: newLastRun)
         
         // Commit to memory only on success
         self.profile = newProfile
@@ -66,9 +85,11 @@ public final class RunManager<Store: ProfileStore> {
     }
     
     /// Reset profile to default (for testing or user request)
-    /// - Throws: If save fails
-    public func resetProfile() throws {
+    /// - Throws: If save/delete fails
+    public func resetProfile() async throws {
+        try await io.reset()
         self.profile = ProgressionProfile()
-        try store.save(profile, lastRun: nil)
+        self.lastRun = nil
+        self.inFlightRunSeeds.removeAll()
     }
 }

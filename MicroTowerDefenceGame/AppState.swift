@@ -10,9 +10,12 @@ import os
 
 @MainActor
 final class AppState: ObservableObject {
-    let runManager: RunManager<JSONFileProfileStore>
-
+    @Published var runManager: RunManager<JSONFileProfileStore>?
+    let toastManager: ToastManager
+    
     init() {
+        self.toastManager = ToastManager()
+        
         let profileURL = Self.makeProfileURL()
         let logger: (any ProfileStoreLogger)? = Self.makeLogger()
 
@@ -22,22 +25,23 @@ final class AppState: ObservableObject {
             logger: logger
         )
 
-        do {
-            self.runManager = try RunManager(store: store)
-        } catch {
-            let nsError = error as NSError
-            if nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoPermissionError {
+        Task {
+            do {
+                self.runManager = try await RunManager.make(store: store)
+            } catch {
+                let nsError = error as NSError
+                if nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoPermissionError {
+                    #if DEBUG
+                    print("❌ AppState: Launch failed due to protected data (device locked).")
+                    #endif
+                }
+                
                 #if DEBUG
-                print("❌ AppState: Launch failed due to protected data (device locked). This is expected if pre-warming.")
+                fatalError("Failed to initialize RunManager: \(error)")
+                #else
+                fatalError("Failed to initialize progression.")
                 #endif
             }
-            
-            #if DEBUG
-            fatalError("Failed to initialize RunManager: \(error)")
-            #else
-            // In release, decide: fatalError or "disabled progression" mode
-            fatalError("Failed to initialize progression.")
-            #endif
         }
     }
 
