@@ -31,7 +31,7 @@ final class GameViewModel: ObservableObject {
     @Published var lastRunSeed: String = "-"
     
     // Rendering
-    @Published var renderSnapshot: RenderSnapshot = .empty
+    @Published var renderSnapshot: RenderSnapshot = RenderSnapshot(enemies: [], towers: [])
     
     // Timer
     private var timer: AnyCancellable?
