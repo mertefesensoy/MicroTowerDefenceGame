@@ -148,7 +148,7 @@ struct GameRootView: View {
             vm.stop()
         }
         // Drive rendering from VM updates
-        .onReceive(vm.$renderSnapshot.compactMap { $0 }) { snapshot in
+        .onReceive(vm.$renderSnapshot) { snapshot in
             bridge.apply(snapshot: snapshot)
         }
         // Lifecycle Sync
