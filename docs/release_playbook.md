@@ -47,21 +47,29 @@ Build once and run on:
 ---
 
 ## 4. Match Repo Setup (one time)
-Create a private git repo (example: microtd-match)
+Create a private git repo: `microtd-match`
 
-Test access:
+## 4. Match Repo Setup (one time)
+Create a private git repo: `microtd-match`
+
+Test access (HTTPS Token):
 ```bash
-git ls-remote <MATCH_GIT_URL>
+# 1. Be sure you have your MATCH_GIT_BASIC_AUTHORIZATION ready
+# 2. Test headers
+git -c http.extraHeader="AUTHORIZATION: basic $MATCH_GIT_BASIC_AUTHORIZATION" ls-remote https://github.com/mertefesensoy/microtd-match.git
 ```
 
 ---
 
 ## 5. Signing Bootstrap (one time)
-Create .env.match from template, then load it:
+Create `.env.match` from template, then load it:
 
 ```bash
+# Generate Auth Header first:
+# printf "mertefesensoy:YOUR_GITHUB_TOKEN" | base64 | tr -d '\n' | pbcopy
+
 cp .env.match.template .env.match
-# edit .env.match with real values
+# Edit .env.match with real values
 
 set -a
 source .env.match
@@ -70,6 +78,7 @@ set +a
 
 Run:
 ```bash
+bundle install
 bundle exec fastlane bootstrap_signing
 ```
 
