@@ -40,6 +40,6 @@ jobs:
           ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          # OPTIONAL: HTTP Auth for Match Repo (Alternative to SSH)
-          # MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          # Path B: HTTP Auth for Match Repo
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: bundle exec fastlane beta
