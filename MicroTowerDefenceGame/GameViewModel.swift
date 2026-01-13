@@ -17,6 +17,22 @@ final class GameViewModel: ObservableObject {
     private var didFinalizeCurrentRun = false
     @Published var isPaused: Bool = false
     
+    // HUD state (used by ContentView/HUDView)
+    @Published var coins: Int = 0
+    @Published var lives: Int = 0
+    @Published var waveText: String = "Not Started"
+    @Published var phaseText: String = "Pre-Run"
+    @Published var currentTickText: String = "Tick: 0"
+    @Published var lastAction: String = ""
+    
+    // Progression debug
+    @Published var level: Int = 1
+    @Published var xp: Int = 0
+    @Published var lastRunSeed: String = "-"
+    
+    // Rendering
+    @Published var renderSnapshot: RenderSnapshot = .empty
+    
     // Timer
     private var timer: AnyCancellable?
     
@@ -221,18 +237,20 @@ final class GameViewModel: ObservableObject {
         let summary = game.makeRunSummary(didWin: didWin)
         
         // 3. Process Progression (Async)
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
+            
             do {
                 // Capture Snapshot Start
-                let startLevel = runManager.profile.level
-                let totalStartXP = runManager.profile.xp 
+                let startLevel = self.runManager.profile.level
+                let totalStartXP = self.runManager.profile.xp 
                 
                 // Apply Run (Async IO)
-                let events = try await runManager.applyRun(summary)
+                let events = try await self.runManager.applyRun(summary)
                 
                 // Capture Snapshot End
-                let endLevel = runManager.profile.level
-                let totalEndXP = runManager.profile.xp
+                let endLevel = self.runManager.profile.level
+                let totalEndXP = self.runManager.profile.xp
                 
                 // Extract metrics
                 let xpGained = events.reduce(0) { sum, event in
@@ -240,13 +258,13 @@ final class GameViewModel: ObservableObject {
                     return sum
                 }
                 
-                let newUnlocks: [UnlockID] = events.compactMap { event in
+                let newUnlocks: [String] = events.compactMap { event in
                     if case .unlocked(let id) = event { return id }
                     return nil
                 }
                 
                 // Calculate Fractions
-                let rules = ProgressionRules.default
+                let rules = ProgressionRules()
                 
                 // Start Fraction
                 let startFloor = rules.xpThreshold(forLevel: startLevel)
@@ -262,14 +280,14 @@ final class GameViewModel: ObservableObject {
                 let endFraction = Double(totalEndXP - endFloor) / endRange
                 
                 // Construct Presentation (Success)
-                let saveSeed = runManager.lastRun?.runSeed ?? 0
+                let saveSeed = self.runManager.lastRun?.runSeed ?? 0
                 let seconds = ticksSurvived / 60
                 let timeStr = String(format: "%02d:%02d", seconds / 60, seconds % 60)
                 
                 self.postRun = PostRunPresentation(
                     didWin: didWin,
                     wavesCompleted: waves,
-                    totalCoins: game.currentCoins,
+                    totalCoins: self.game.currentCoins,
                     durationStats: timeStr,
                     xpGained: xpGained,
                     startLevel: startLevel,
@@ -288,9 +306,9 @@ final class GameViewModel: ObservableObject {
                 let isProtected = nsError.domain == NSCocoaErrorDomain && nsError.code == NSFileReadNoPermissionError
                 
                 if isProtected {
-                    toastManager.showProtectedDataWarning()
+                    self.toastManager.showProtectedDataWarning()
                 } else {
-                    toastManager.showSaveFailure(error.localizedDescription)
+                    self.toastManager.showSaveFailure(error.localizedDescription)
                 }
                 
                 // Construct Presentation (Failure)
@@ -300,11 +318,11 @@ final class GameViewModel: ObservableObject {
                 self.postRun = PostRunPresentation(
                     didWin: didWin,
                     wavesCompleted: waves,
-                    totalCoins: game.currentCoins,
+                    totalCoins: self.game.currentCoins,
                     durationStats: timeStr,
                     xpGained: 0,
-                    startLevel: runManager.profile.level,
-                    endLevel: runManager.profile.level,
+                    startLevel: self.runManager.profile.level,
+                    endLevel: self.runManager.profile.level,
                     startFraction: 0,
                     endFraction: 0,
                     unlocks: [],
