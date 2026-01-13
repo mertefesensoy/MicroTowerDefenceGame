@@ -261,21 +261,27 @@ extension Color {
     }
 }
 
-#Preview {
-    PostRunSummaryView(
-        model: PostRunPresentation(
-            didWin: true,
-            wavesCompleted: 10,
-            totalCoins: 1250,
-            durationStats: "12:45",
-            xpGained: 500,
-            startLevel: 5,
-            endLevel: 6,
-            startFraction: 0.8,
-            endFraction: 0.3,
-            unlocks: ["tower_sniper", "relic_uncommon_pack", "unknown_test_id"],
-            saveStatus: .saved(seed: 123456)
-        ),
-        onContinue: {}
-    )
+
+#if DEBUG
+struct PostRunSummaryView_Previews: PreviewProvider {
+    static var previews: some View {
+        PostRunSummaryView(
+            model: PostRunPresentation(
+                didWin: true,
+                wavesCompleted: 10,
+                totalCoins: 1250,
+                durationStats: "12:45",
+                xpGained: 500,
+                startLevel: 5,
+                endLevel: 6,
+                startFraction: 0.8,
+                endFraction: 0.3,
+                unlocks: ["tower_sniper", "relic_uncommon_pack", "unknown_test_id"],
+                saveStatus: .saved(seed: 123456)
+            ),
+            onContinue: {}
+        )
+    }
 }
+#endif
+

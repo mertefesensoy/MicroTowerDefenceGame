@@ -37,11 +37,17 @@ struct ToastOverlay: View {
     }
 }
 
-#Preview {
-    let mgr = ToastManager()
-    Color.blue.ignoresSafeArea()
-        .overlay(ToastOverlay(manager: mgr))
-        .onAppear {
-            mgr.show(text: "Game Saved", icon: "checkmark.circle", color: .green)
-        }
+
+#if DEBUG
+struct ToastOverlay_Previews: PreviewProvider {
+    static var previews: some View {
+        let mgr = ToastManager()
+        Color.blue.ignoresSafeArea()
+            .overlay(ToastOverlay(manager: mgr))
+            .onAppear {
+                mgr.show(text: "Game Saved", icon: "checkmark.circle", color: .green)
+            }
+    }
 }
+#endif
+

@@ -235,16 +235,22 @@ struct HUDView: View {
     }
 }
 
-#Preview {
-    HUDView(
-        coins: 100, 
-        lives: 20, 
-        waveText: "Wave 1", 
-        phaseText: "Building", 
-        tickText: "Tick: 0", 
-        lastAction: "Ready",
-        level: 5,
-        xp: 1250,
-        lastRunSeed: "A1B2C3"
-    )
+
+#if DEBUG
+struct HUDView_Previews: PreviewProvider {
+    static var previews: some View {
+        HUDView(
+            coins: 100, 
+            lives: 20, 
+            waveText: "Wave 1", 
+            phaseText: "Building", 
+            tickText: "Tick: 0", 
+            lastAction: "Ready",
+            level: 5,
+            xp: 1250,
+            lastRunSeed: "A1B2C3"
+        )
+    }
 }
+#endif
+
