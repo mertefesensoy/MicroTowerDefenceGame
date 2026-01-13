@@ -29,9 +29,9 @@ final class RunManagerTests: XCTestCase {
     // MARK: - Initialization
     
     @MainActor
-    func testInitWithMissingFileCreatesDefaultProfile() throws {
+    func testInitWithMissingFileCreatesDefaultProfile() async throws {
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
-        let manager = try RunManager(store: store)
+        let manager = try await RunManager.make(store: store)
         
         XCTAssertEqual(manager.profile.xp, 0)
         XCTAssertEqual(manager.profile.level, 1)
@@ -39,14 +39,14 @@ final class RunManagerTests: XCTestCase {
     }
     
     @MainActor
-    func testInitLoadsExistingProfile() throws {
+    func testInitLoadsExistingProfile() async throws {
         // Create and save a profile
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         let existingProfile = ProgressionProfile(xp: 250, level: 2, unlocks: ["relic_uncommon_pack"])
         try store.save(existingProfile, lastRun: nil)
         
         // Init manager, should load existing
-        let manager = try RunManager(store: store)
+        let manager = try await RunManager.make(store: store)
         
         XCTAssertEqual(manager.profile.xp, 250)
         XCTAssertEqual(manager.profile.level, 2)
@@ -56,9 +56,9 @@ final class RunManagerTests: XCTestCase {
     // MARK: - Run Application
     
     @MainActor
-    func testApplyRunUpdatesProfileAndPersists() throws {
+    func testApplyRunUpdatesProfileAndPersists() async throws {
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
-        let manager = try RunManager(store: store)
+        let manager = try await RunManager.make(store: store)
         
         // Run worth 150 XP (should level up from 1 to 2)
         let summary = RunSummary(
@@ -71,7 +71,7 @@ final class RunManagerTests: XCTestCase {
             relicIDsChosen: []
         )
         
-        let events = try manager.applyRun(summary)
+        let events = try await manager.applyRun(summary)
         
         // Verify events
         XCTAssertTrue(events.contains { $0 == .xpGained(amount: 150) })
@@ -89,9 +89,9 @@ final class RunManagerTests: XCTestCase {
     }
     
     @MainActor
-    func testApplyRunPersistsLastRunMetadata() throws {
+    func testApplyRunPersistsLastRunMetadata() async throws {
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
-        let manager = try RunManager(store: store)
+        let manager = try await RunManager.make(store: store)
         
         let summary = RunSummary(
             runSeed: 99999,
@@ -103,7 +103,7 @@ final class RunManagerTests: XCTestCase {
             relicIDsChosen: ["r1"]
         )
         
-        _ = try manager.applyRun(summary)
+        _ = try await manager.applyRun(summary)
         
         // Load save file directly to verify lastRun
         let data = try Data(contentsOf: testFileURL)
@@ -119,7 +119,7 @@ final class RunManagerTests: XCTestCase {
     }
     
     @MainActor
-    func testApplyRunTriggersUnlocks() throws {
+    func testApplyRunTriggersUnlocks() async throws {
         // Seed profile through store (Profile at 390 XP, level 2, 10 XP away from level 3)
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
         try store.save(
@@ -131,7 +131,7 @@ final class RunManagerTests: XCTestCase {
             lastRun: nil
         )
         
-        let manager = try RunManager(store: store)
+        let manager = try await RunManager.make(store: store)
         
         let summary = RunSummary(
             runSeed: 1,
@@ -143,7 +143,7 @@ final class RunManagerTests: XCTestCase {
             relicIDsChosen: []
         )
         
-        let events = try manager.applyRun(summary)
+        let events = try await manager.applyRun(summary)
         
         // Should level up and unlock level 3 items
         XCTAssertTrue(events.contains { $0 == .leveledUp(from: 2, to: 3) })
@@ -160,9 +160,9 @@ final class RunManagerTests: XCTestCase {
     // MARK: - Reset
     
     @MainActor
-    func testResetProfileClearsDataAndPersists() throws {
+    func testResetProfileClearsDataAndPersists() async throws {
         let store = JSONFileProfileStore(fileURL: testFileURL, corruptPolicy: .resetToDefaultAndBackup)
-        let manager = try RunManager(store: store)
+        let manager = try await RunManager.make(store: store)
         
         // Apply a run to modify profile
         let summary = RunSummary(
@@ -174,12 +174,12 @@ final class RunManagerTests: XCTestCase {
             didWin: false,
             relicIDsChosen: []
         )
-        _ = try manager.applyRun(summary)
+        _ = try await manager.applyRun(summary)
         
         XCTAssertNotEqual(manager.profile.xp, 0)
         
         // Reset
-        try manager.resetProfile()
+        try await manager.resetProfile()
         
         XCTAssertEqual(manager.profile.xp, 0)
         XCTAssertEqual(manager.profile.level, 1)
