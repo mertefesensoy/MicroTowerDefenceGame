@@ -4,6 +4,7 @@
 import SwiftUI
 import SpriteKit
 import MicroTDCore
+import Combine
 
 struct ContentView: View {
     @EnvironmentObject private var appState: AppState
@@ -147,7 +148,7 @@ struct GameRootView: View {
             vm.stop()
         }
         // Drive rendering from VM updates
-        .onChange(of: vm.renderSnapshot) { newSnapshot in
+        .onReceive(vm.$renderSnapshot) { newSnapshot in
             bridge.apply(snapshot: newSnapshot)
         }
         // Lifecycle Sync

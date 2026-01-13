@@ -20,7 +20,28 @@ final class GameViewModel: ObservableObject {
     // Timer
     private var timer: AnyCancellable?
     
-    // ...
+    init(runManager: RunManager<JSONFileProfileStore>, toastManager: ToastManager) {
+        self.runManager = runManager
+        self.toastManager = toastManager
+        // Initialize with default GameState
+        // Use a random seed for the first game loop
+        self.game = GameState(runSeed: UInt64.random(in: 0...UInt64.max))
+        
+        // Initial sync
+        self.coins = game.currentCoins
+        self.lives = game.currentLives
+        self.currentTickText = "Tick: 0"
+        self.waveText = "Not Started"
+        self.phaseText = "Pre-Run"
+        self.lastRunSeed = "-"
+        self.level = runManager.profile.level
+        self.xp = runManager.profile.xp
+        self.renderSnapshot = game.getRenderSnapshot()
+        
+        if let lastRun = runManager.lastRun {
+            self.lastRunSeed = String(String(lastRun.runSeed).suffix(6))
+        }
+    }
     
     // MARK: - Public Interface
     

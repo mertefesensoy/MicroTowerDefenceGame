@@ -74,8 +74,14 @@ final class RunManagerTests: XCTestCase {
         let events = try await manager.applyRun(summary)
         
         // Verify events
-        XCTAssertTrue(events.contains { $0 == .xpGained(amount: 150) })
-        XCTAssertTrue(events.contains { $0 == .leveledUp(from: 1, to: 2) })
+        XCTAssertTrue(events.contains { 
+            if case .xpGained(let amount) = $0 { return amount == 150 }
+            return false
+        })
+        XCTAssertTrue(events.contains { 
+            if case .leveledUp(let from, let to) = $0 { return from == 1 && to == 2 }
+            return false
+        })
         
         // Verify profile updated
         XCTAssertEqual(manager.profile.xp, 150)
@@ -146,7 +152,10 @@ final class RunManagerTests: XCTestCase {
         let events = try await manager.applyRun(summary)
         
         // Should level up and unlock level 3 items
-        XCTAssertTrue(events.contains { $0 == .leveledUp(from: 2, to: 3) })
+        XCTAssertTrue(events.contains { 
+            if case .leveledUp(let from, let to) = $0 { return from == 2 && to == 3 }
+            return false
+        })
         XCTAssertTrue(events.contains { 
             if case .unlocked(let id) = $0 { return id == "relic_rare_pack" || id == "tower_missile" }
             return false
