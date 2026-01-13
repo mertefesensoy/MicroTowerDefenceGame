@@ -45,6 +45,9 @@ final class GameViewModel: ObservableObject {
         do {
             definitions = try GameDefinitions.loadFromBundle()
         } catch {
+            #if DEBUG
+            assertionFailure("Failed to load game definitions: \(error)")
+            #endif
             fatalError("Failed to load game definitions: \(error)")
         }
         
@@ -113,6 +116,11 @@ final class GameViewModel: ObservableObject {
     /// Current tick for command timestamping
     var currentTick: Int {
         game.currentTick
+    }
+    
+    /// Whether we have a valid last run record
+    var hasLastRun: Bool {
+        lastRunSeed != "-"
     }
     
     // MARK: - Post-Run Presentation
