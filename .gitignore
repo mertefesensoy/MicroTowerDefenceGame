@@ -41,3 +41,7 @@ xcuserdata/
 vendor/
 .bundle/
 
+# Build tools (too large for git, install locally)
+bin/
+
+
