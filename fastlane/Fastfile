@@ -59,7 +59,9 @@ platform :ios do
       readonly: true
     )
 
+
     build_app(
+      project: "MicroTowerDefenceGame.xcodeproj",
       scheme: "MicroTowerDefenceGame",
       export_method: "app-store"
     )
