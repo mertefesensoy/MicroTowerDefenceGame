@@ -11,8 +11,10 @@ platform :ios do
       Dotenv.load(".env.match")
     end
 
-    # Guard against missing critical env vars
+    # Guard against missing critical env vars (fail fast)
     UI.user_error!("Missing MATCH_GIT_URL") unless ENV["MATCH_GIT_URL"]
+    UI.user_error!("Missing MATCH_GIT_BASIC_AUTHORIZATION") unless ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
+    UI.user_error!("Missing MATCH_PASSWORD") unless ENV["MATCH_PASSWORD"]
     UI.user_error!("Missing DEVELOPER_PORTAL_TEAM_ID") unless ENV["DEVELOPER_PORTAL_TEAM_ID"]
   end
 
@@ -37,7 +39,7 @@ platform :ios do
       type: "appstore",
       app_identifier: "com.mertefesensoy.MicroTowerDefenceGame",
       git_url: ENV.fetch("MATCH_GIT_URL"),
-      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
+      git_basic_authorization: ENV.fetch("MATCH_GIT_BASIC_AUTHORIZATION"),
       team_id: ENV.fetch("DEVELOPER_PORTAL_TEAM_ID"),
       readonly: false
     )
@@ -52,7 +54,7 @@ platform :ios do
       type: "appstore",
       app_identifier: "com.mertefesensoy.MicroTowerDefenceGame",
       git_url: ENV.fetch("MATCH_GIT_URL"),
-      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
+      git_basic_authorization: ENV.fetch("MATCH_GIT_BASIC_AUTHORIZATION"),
       team_id: ENV.fetch("DEVELOPER_PORTAL_TEAM_ID"),
       readonly: true
     )
