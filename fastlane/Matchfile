@@ -10,5 +10,9 @@ team_id(ENV.fetch("DEVELOPER_PORTAL_TEAM_ID"))
 readonly(false) # lane can override to true for beta
 clone_branch_directly(true)
 
+# Handle GitHub's default 'main' branch (new repos use 'main' not 'master')
+git_branch("main")
+
 # Use basic auth header if you're using MATCH_GIT_BASIC_AUTHORIZATION
 git_basic_authorization(ENV["MATCH_GIT_BASIC_AUTHORIZATION"]) if ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
+
