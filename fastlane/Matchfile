@@ -1,10 +1,14 @@
-git_url(ENV["MATCH_GIT_URL"])
+git_url(ENV.fetch("MATCH_GIT_URL"))
 storage_mode("git")
+
 type("appstore")
-<<<<<<< HEAD
 
 app_identifier(["com.mertefesensoy.MicroTowerDefenceGame"])
-=======
-# Readonly is overridden in lanes (false for bootstrap, true for beta)
-readonly(true)
->>>>>>> 4e34510 (feat: setup release automation pipeline (fastlane + gha))
+team_id(ENV.fetch("DEVELOPER_PORTAL_TEAM_ID"))
+
+# Recommended settings
+readonly(false) # lane can override to true for beta
+clone_branch_directly(true)
+
+# Use basic auth header if you're using MATCH_GIT_BASIC_AUTHORIZATION
+git_basic_authorization(ENV["MATCH_GIT_BASIC_AUTHORIZATION"]) if ENV["MATCH_GIT_BASIC_AUTHORIZATION"]

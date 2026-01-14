@@ -1,9 +1,6 @@
 app_identifier("com.mertefesensoy.MicroTowerDefenceGame")
-<<<<<<< HEAD
 
-# Uncomment these after filling in .env.match:
-# apple_id(ENV["APPLE_ID"])
-# team_id(ENV["DEVELOPER_PORTAL_TEAM_ID"])
-# itc_team_id(ENV["APP_STORE_CONNECT_TEAM_ID"])
-=======
->>>>>>> 4e34510 (feat: setup release automation pipeline (fastlane + gha))
+# Optional (recommended): if you run multiple teams/accounts
+apple_id(ENV["FASTLANE_USER"]) if ENV["FASTLANE_USER"]
+team_id(ENV["DEVELOPER_PORTAL_TEAM_ID"]) if ENV["DEVELOPER_PORTAL_TEAM_ID"]
+itc_team_id(ENV["APP_STORE_CONNECT_TEAM_ID"]) if ENV["APP_STORE_CONNECT_TEAM_ID"]
