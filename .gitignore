@@ -36,3 +36,8 @@ xcuserdata/
 *~.nib
 *.tmp
 *.bak
+
+# Ruby / Bundler
+vendor/
+.bundle/
+
