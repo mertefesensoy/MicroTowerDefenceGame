@@ -30,6 +30,12 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: true
 
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate --spec project.yml
+
       - name: Install dependencies
         run: bundle install
 

@@ -19,6 +19,13 @@ Ship one universal iOS build (iPhone + iPad) to TestFlight, then App Store.
 ## 1. Generate Project (XcodeGen)
 From repo root:
 ```bash
+# Option A: Use helper script (recommended)
+./scripts/install_xcodegen.sh  # First time only
+./scripts/generate_project.sh
+
+# Option B: Manual
+xcodegen generate --spec project.yml
+# OR (if installed locally)
 ./bin/xcodegen-final generate --spec project.yml
 ```
 
