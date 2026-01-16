@@ -1,10 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
-import { GameState } from './src/core';
+import { GameState } from './src/core/GameState';
+import { createSampleDefinitions } from './src/core/definitions/GameDefinitions';
 
 export default function App() {
-  const [game] = useState(() => new GameState(Date.now()));
+  const [game] = useState(() => new GameState(Date.now(), createSampleDefinitions()));
   const [tick, setTick] = useState(0);
   const [events, setEvents] = useState(0);
 
@@ -23,23 +24,41 @@ export default function App() {
     game.processCommand({ type: 'startWave', tick: game.currentTick });
   };
 
+  const handlePlaceTower = () => {
+    game.processCommand({
+      type: 'placeTower',
+      towerType: 'archer',
+      gridX: 2,
+      gridY: 3,
+      tick: game.currentTick
+    });
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>MicroTD Core - Phase C1</Text>
+      <Text style={styles.title}>MicroTD Core - Phase C2 ✅</Text>
       <Text style={styles.stat}>Tick: {tick}</Text>
       <Text style={styles.stat}>Coins: {game.currentCoins}</Text>
       <Text style={styles.stat}>Lives: {game.currentLives}</Text>
       <Text style={styles.stat}>State: {game.currentState.type}</Text>
       <Text style={styles.stat}>Events: {events}</Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleStartWave}>
-        <Text style={styles.buttonText}>Start Wave</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.button} onPress={handlePlaceTower}>
+          <Text style={styles.buttonText}>Place Tower</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.button} onPress={handleStartWave}>
+          <Text style={styles.buttonText}>Start Wave</Text>
+        </TouchableOpacity>
+      </View>
 
       <Text style={styles.info}>
-        ✅ Core is running!{'\n'}
-        ✅ Skia renderer installed{'\n'}
-        🎯 Ready for Phase C2
+        ✅ Full game loop working!{'\n'}
+        ✅ Wave spawning{'\n'}
+        ✅ Tower combat{'\n'}
+        ✅ Economy system{'\n'}
+        🎯 Phase C2 COMPLETE!
       </Text>
 
       <StatusBar style="auto" />
@@ -67,15 +86,19 @@ const styles = StyleSheet.create({
     marginVertical: 4,
     fontFamily: 'monospace',
   },
-  button: {
-    backgroundColor: '#16f2b3',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 20,
   },
+  button: {
+    backgroundColor: '#16f2b3',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
   buttonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#1a1a2e',
   },
