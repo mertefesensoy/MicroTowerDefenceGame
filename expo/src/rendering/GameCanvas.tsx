@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, Text, Pressable } from 'react-native';
 import { Canvas } from '@shopify/react-native-skia';
 import { GameState } from '../core/GameState';
@@ -6,17 +6,24 @@ import { createSampleDefinitions } from '../core/definitions/GameDefinitions';
 import { MapRenderer } from './MapRenderer';
 import { TowerRenderer } from './TowerRenderer';
 import { EnemyRenderer } from './EnemyRenderer';
+import { saveRunResult, type RunResult } from '../persistence/RunResult';
 import type { Tower } from '../core/entities/Tower';
 import type { Enemy } from '../core/entities/Enemy';
 
 const { width, height } = Dimensions.get('window');
 
-export function GameCanvas() {
+interface GameCanvasProps {
+    onGameEnd: (result: RunResult) => void;
+}
+
+export function GameCanvas({ onGameEnd }: GameCanvasProps) {
     const [game] = useState(() => new GameState(Date.now(), createSampleDefinitions()));
     const [tick, setTick] = useState(0);
     const [towers, setTowers] = useState<Tower[]>([]);
     const [enemies, setEnemies] = useState<Enemy[]>([]);
     const [selectedTowerType, setSelectedTowerType] = useState<string | null>('archer');
+    const gameEndedRef = useRef(false);
+    const startTimeRef = useRef(Date.now());
 
     const mapDef = game.definitions.maps.map('default')!;
     const cellSize = Math.min(width, height - 200) / Math.max(mapDef.gridWidth, mapDef.gridHeight);
@@ -30,10 +37,40 @@ export function GameCanvas() {
             setTick(game.currentTick);
             setTowers(game.getTowers() as Tower[]);
             setEnemies(game.getEnemies() as Enemy[]);
+
+            // Check for game end
+            const state = game.currentState;
+            if ((state.type === 'victory' || state.type === 'defeat') && !gameEndedRef.current) {
+                gameEndedRef.current = true;
+
+                // Calculate run stats
+                const towers = game.getTowers();
+                const totalKills = towers.reduce((sum, t) => sum + t.kills, 0);
+                const totalDamage = towers.reduce((sum, t) => sum + t.totalDamage, 0);
+                const durationSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+
+                const result: RunResult = {
+                    id: `${game.runSeed}-${Date.now()}`,
+                    timestamp: Date.now(),
+                    seed: game.runSeed,
+                    wavesCompleted: state.type === 'victory' ? state.wavesCompleted : state.wavesCompleted,
+                    totalCoins: game.currentCoins,
+                    totalKills,
+                    totalDamage,
+                    finalLives: game.currentLives,
+                    isVictory: state.type === 'victory',
+                    durationSeconds,
+                };
+
+                // Save result and trigger callback
+                saveRunResult(result).then(() => {
+                    setTimeout(() => onGameEnd(result), 500);
+                });
+            }
         }, 1000 / 60);
 
         return () => clearInterval(interval);
-    }, [game]);
+    }, [game, onGameEnd]);
 
     const handleCanvasTap = (x: number, y: number) => {
         if (!selectedTowerType) return;
