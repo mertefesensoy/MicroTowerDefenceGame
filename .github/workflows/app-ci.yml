@@ -1,20 +1,58 @@
-name: iOS App CI (DISABLED - Migrated to Expo)
+name: iOS App CI (Swift - Legacy)
 
-# Temporarily disabled while migrating to Expo
-# See strategy-c/expo-migration branch for the new React Native implementation
+# Only runs when Swift/native files change
+# Expo app is now the primary focus (see expo-ci.yml)
 
 on:
-  workflow_dispatch:  # Only run manually
+  push:
+    branches: [ "master", "main" ]
+    paths:
+      - "MicroTowerDefenceGame/**"
+      - "MicroTDCore/**"
+      - "**.xcodeproj/**"
+      - "project.yml"
+      - ".github/workflows/app-ci.yml"
+  pull_request:
+    branches: [ "master", "main" ]
+    paths:
+      - "MicroTowerDefenceGame/**"
+      - "MicroTDCore/**"
+      - "**.xcodeproj/**"
+      - "project.yml"
 
 jobs:
   build:
-    name: Build iOS App (Swift - Legacy)
+    name: Build iOS App (Swift)
     runs-on: macos-14
-    if: false  # Disabled
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: This workflow is disabled
-        run: echo "Swift CI disabled - using Expo now"
+      - name: Select Xcode 15.0
+        run: sudo xcode-select -s /Applications/Xcode_15.0.app
+        
+      - name: Install XcodeGen
+        run: brew install xcodegen
+        
+      - name: Generate Project
+        run: xcodegen generate
+        
+      - name: Resolve Package Dependencies
+        run: xcodebuild -resolvePackageDependencies -project MicroTowerDefenceGame.xcodeproj -destination 'platform=iOS Simulator,name=iPhone 15'
+
+      - name: Build App (Simulator, no signing)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project MicroTowerDefenceGame.xcodeproj \
+            -scheme MicroTowerDefenceGame \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER=""

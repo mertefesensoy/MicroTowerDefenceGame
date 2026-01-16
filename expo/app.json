@@ -14,18 +14,23 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mertefesensoy.MicroTowerDefenceGame",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIRequiresFullScreen": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f0f1e"
       },
-      "package": "com.mertefesensoy.microtowerdefencegame"
+      "package": "com.mertefesensoy.microtowerdefencegame",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [],
     "extra": {
       "eas": {
         "projectId": "YOUR_PROJECT_ID_HERE"
