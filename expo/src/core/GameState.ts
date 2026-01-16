@@ -108,6 +108,21 @@ export class GameState {
     }
 
     /**
+     * Get all towers for rendering
+     */
+    getTowers(): readonly Tower[] {
+        return this.towers;
+    }
+
+    /**
+     * Get all enemies for rendering
+     */
+    getEnemies(): readonly Enemy[] {
+        return this.enemies;
+    }
+
+
+    /**
      * Main simulation tick - advances game by one fixed timestep
      */
     tick(): void {
