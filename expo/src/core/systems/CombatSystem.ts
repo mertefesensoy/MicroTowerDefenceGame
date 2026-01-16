@@ -4,7 +4,7 @@
 import { Tower } from '../entities/Tower';
 import { Enemy } from '../entities/Enemy';
 import { GridPosition } from '../entities/GridPosition';
-import type { MapDef, Waypoint } from '../definitions/MapDef';
+import type { MapDef } from '../definitions/MapDef';
 
 /**
  * Result of a combat action

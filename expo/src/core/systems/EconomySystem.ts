@@ -24,7 +24,7 @@ export class EconomySystem {
     /**
      * Add coins
      */
-    addCoins(amount: number, reason: string = 'reward'): number {
+    addCoins(amount: number, _reason: string = 'reward'): number {
         this._coins += amount;
         if (amount > 0) {
             this._totalCoinsEarned += amount;

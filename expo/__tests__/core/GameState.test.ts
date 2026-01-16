@@ -1,30 +1,31 @@
 // __tests__/core/GameState.test.ts
 import { GameState } from '../../src/core';
+import { createSampleDefinitions } from '../../src/core/definitions/GameDefinitions';
 
 describe('GameState', () => {
     it('should initialize with correct starting values', () => {
-        const game = new GameState(12345);
+        const game = new GameState(12345, createSampleDefinitions());
 
         expect(game.currentTick).toBe(0);
-        expect(game.currentCoins).toBe(100);
+        expect(game.currentCoins).toBe(200);
         expect(game.currentLives).toBe(20);
         expect(game.currentState.type).toBe('building');
     });
 
     it('should emit initial coin event', () => {
-        const game = new GameState(12345);
+        const game = new GameState(12345, createSampleDefinitions());
         const events = game.eventLog.getAll();
 
         expect(events.length).toBe(1);
         expect(events[0].type).toBe('coinChanged');
         if (events[0].type === 'coinChanged') {
-            expect(events[0].newTotal).toBe(100);
+            expect(events[0].newTotal).toBe(200);
             expect(events[0].reason).toBe('game_start');
         }
     });
 
     it('should advance tick when tick() is called', () => {
-        const game = new GameState(12345);
+        const game = new GameState(12345, createSampleDefinitions());
 
         expect(game.currentTick).toBe(0);
         game.tick();
@@ -34,8 +35,8 @@ describe('GameState', () => {
     });
 
     it('should produce deterministic results with same seed', () => {
-        const game1 = new GameState(12345);
-        const game2 = new GameState(12345);
+        const game1 = new GameState(12345, createSampleDefinitions());
+        const game2 = new GameState(12345, createSampleDefinitions());
 
         for (let i = 0; i < 10; i++) {
             game1.tick();
@@ -48,7 +49,7 @@ describe('GameState', () => {
     });
 
     it('should start wave when startWave command is processed', () => {
-        const game = new GameState(12345);
+        const game = new GameState(12345, createSampleDefinitions());
 
         game.processCommand({ type: 'startWave', tick: 0 });
 

@@ -3,7 +3,7 @@
 
 import { WaveDefinitions, WaveDef } from '../definitions/WaveDef';
 import { EnemyDefinitions, EnemyDef } from '../definitions/EnemyDef';
-import { SeededRNG } from '../SeededRNG';
+
 
 /**
  * Wave spawning and management system
@@ -17,7 +17,7 @@ export class WaveSystem {
     constructor(
         private readonly waveDefs: WaveDefinitions,
         private readonly enemyDefs: EnemyDefinitions,
-        private readonly rng: SeededRNG
+        _rng: any
     ) { }
 
     /**

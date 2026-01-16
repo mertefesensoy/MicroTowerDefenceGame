@@ -1,7 +1,7 @@
 // MapRenderer.tsx
 // Renders game map, grid, and path using Skia
 
-import { Canvas, Rect, Path, Circle, Skia } from '@shopify/react-native-skia';
+import { Rect, Path, Circle, Skia } from '@shopify/react-native-skia';
 import type { MapDef } from '../core/definitions/MapDef';
 
 interface MapRendererProps {
