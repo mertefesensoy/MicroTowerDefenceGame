@@ -33,8 +33,9 @@
     "plugins": [],
     "extra": {
       "eas": {
-        "projectId": "YOUR_PROJECT_ID_HERE"
+        "projectId": "b3ee3cf8-5112-48cd-907d-727fc6ca579a"
       }
-    }
+    },
+    "owner": "sensoymertefe"
   }
 }
