@@ -24,7 +24,8 @@
         "production": {
             "autoIncrement": true,
             "ios": {
-                "resourceClass": "m-medium"
+                "resourceClass": "m-medium",
+                "distribution": "store"
             },
             "android": {
                 "buildType": "aab"
