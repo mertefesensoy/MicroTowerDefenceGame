@@ -1,0 +1,38 @@
+name: Expo App CI
+
+on:
+  push:
+    branches: [ "strategy-c/expo-migration" ]
+    paths:
+      - 'expo/**'
+      - '.github/workflows/expo-ci.yml'
+  pull_request:
+    branches: [ "strategy-c/expo-migration" ]
+
+jobs:
+  test:
+    name: Run Expo Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: expo/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./expo
+        run: npm ci
+      
+      - name: Run TypeScript check
+        working-directory: ./expo
+        run: npx tsc --noEmit
+      
+      - name: Run tests
+        working-directory: ./expo
+        run: npm test
