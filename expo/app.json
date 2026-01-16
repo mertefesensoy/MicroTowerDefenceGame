@@ -16,7 +16,8 @@
       "bundleIdentifier": "com.mertefesensoy.MicroTowerDefenceGame",
       "buildNumber": "1",
       "infoPlist": {
-        "UIRequiresFullScreen": false
+        "UIRequiresFullScreen": false,
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
