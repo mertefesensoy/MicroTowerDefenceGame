@@ -4,10 +4,11 @@ import { MainMenu } from './src/screens/MainMenu';
 import { GameCanvas } from './src/rendering/GameCanvas';
 import { PostRunSummary } from './src/screens/PostRunSummary';
 import type { RunResult } from './src/persistence/RunResult';
+import { ErrorBoundary } from './src/ErrorBoundary';
 
 type Screen = 'menu' | 'game' | 'summary';
 
-export default function App() {
+function RootApp() {
     const [screen, setScreen] = useState<Screen>('menu');
     const [runResult, setRunResult] = useState<RunResult | null>(null);
 
@@ -41,5 +42,13 @@ export default function App() {
             )}
             <StatusBar style="light" />
         </>
+    );
+}
+
+export default function App() {
+    return (
+        <ErrorBoundary>
+            <RootApp />
+        </ErrorBoundary>
     );
 }
