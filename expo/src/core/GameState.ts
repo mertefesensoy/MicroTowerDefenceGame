@@ -1,5 +1,6 @@
 // GameState.ts
 // Main game state - pure TypeScript, deterministic, testable
+// Ported from MicroTDCore/Systems/GameState.swift
 
 import { EventLog } from './GameEvent';
 import { CommandLog, GameCommand } from './GameCommand';
@@ -11,17 +12,17 @@ import { GridPosition } from './entities/GridPosition';
 import { WaveSystem } from './systems/WaveSystem';
 import { CombatSystem } from './systems/CombatSystem';
 import { EconomySystem } from './systems/EconomySystem';
+import { RelicSystem } from './systems/RelicSystem';
+import { RelicDatabase } from './definitions/RelicDatabase';
+import { RunStateMachine, type RunState } from './systems/RunStateMachine';
+import type { RenderSnapshot, RenderEnemy, RenderTower } from './systems/RenderSnapshot';
+import type { RunSummary } from './definitions/ProgressionTypes';
 import type { GameDefinitions } from './definitions/GameDefinitions';
+import type { RelicDef } from './definitions/RelicDef';
+import { isValidPlacement } from './definitions/MapDef';
 
-/**
- * Run state machine states
- */
-export type RunState =
-    | { type: 'building'; waveIndex: number }
-    | { type: 'inWave'; waveIndex: number }
-    | { type: 'relicChoice'; waveIndex: number }
-    | { type: 'victory'; wavesCompleted: number }
-    | { type: 'defeat'; wavesCompleted: number };
+// Re-export RunState for consumers
+export type { RunState };
 
 /**
  * Main game state - processes commands, runs simulation, emits events
@@ -38,9 +39,8 @@ export class GameState {
     private readonly waveSystem: WaveSystem;
     private readonly combatSystem: CombatSystem;
     private readonly economySystem: EconomySystem;
-
-    // State machine
-    private state: RunState;
+    private readonly relicSystem: RelicSystem;
+    private readonly stateMachine: RunStateMachine;
 
     // Game entities
     private enemies: Enemy[] = [];
@@ -51,6 +51,8 @@ export class GameState {
     private lives: number;
     private nextEnemyId = 0;
     private nextTowerId = 0;
+    private enemiesDefeated = 0;
+    private relicsCollected = 0;
 
     // Logs
     readonly eventLog: EventLog;
@@ -58,10 +60,20 @@ export class GameState {
 
     // Config
     private readonly startingLives = 20;
+    private readonly startingCoins = 200;
+    private readonly relicOfferInterval = 2;  // offer relics every N waves
+    private readonly relicOfferCount = 3;     // how many choices per offer
+
+    // Current relic offer (if any)
+    private currentRelicOffer: RelicDef[] | null = null;
+
+    // Map reference
+    private readonly mapID: string;
 
     constructor(runSeed: number, definitions: GameDefinitions, mapID: string = 'default') {
         this.runSeed = runSeed;
         this.definitions = definitions;
+        this.mapID = mapID;
 
         // Initialize systems
         this.rng = new SeededRNG(runSeed);
@@ -71,10 +83,18 @@ export class GameState {
         const mapDef = definitions.maps.map(mapID);
         if (!mapDef) throw new Error(`Map ${mapID} not found`);
         this.combatSystem = new CombatSystem(mapDef);
-        this.economySystem = new EconomySystem(200);
 
-        // Initialize state
-        this.state = { type: 'building', waveIndex: 0 };
+        const relicDB = new RelicDatabase(definitions.relics);
+        this.relicSystem = new RelicSystem(relicDB, this.rng);
+
+        // Apply starting coins bonus from any relics (for future use)
+        const totalStartingCoins = this.startingCoins + this.relicSystem.combinedStartingCoins;
+        this.economySystem = new EconomySystem(totalStartingCoins);
+
+        // Initialize state machine
+        this.stateMachine = new RunStateMachine();
+        this.stateMachine.startRun();  // preRun → building(0)
+
         this.lives = this.startingLives;
 
         // Initialize logs
@@ -85,18 +105,20 @@ export class GameState {
         this.eventLog.emit({
             type: 'coinChanged',
             newTotal: this.economySystem.coins,
-            delta: 200,
+            delta: totalStartingCoins,
             reason: 'game_start',
             tick: 0,
         });
     }
+
+    // ─── Public Accessors ───
 
     get currentTick(): number {
         return this.clock.currentTick;
     }
 
     get currentState(): RunState {
-        return this.state;
+        return this.stateMachine.state;
     }
 
     get currentCoins(): number {
@@ -105,6 +127,18 @@ export class GameState {
 
     get currentLives(): number {
         return this.lives;
+    }
+
+    get currentWave(): number {
+        const s = this.stateMachine.state;
+        if (s.type === 'building' || s.type === 'inWave' || s.type === 'relicChoice') {
+            return s.waveIndex;
+        }
+        return 0;
+    }
+
+    get currentRelicChoices(): RelicDef[] | null {
+        return this.currentRelicOffer;
     }
 
     /**
@@ -121,28 +155,117 @@ export class GameState {
         return this.enemies;
     }
 
+    /**
+     * Create a run summary for the progression system
+     */
+    makeRunSummary(): RunSummary {
+        const state = this.stateMachine.state;
+        const wavesCleared = (state.type === 'gameOver' || state.type === 'postRunSummary')
+            ? state.wavesCompleted : this.currentWave;
+
+        return {
+            runSeed: this.runSeed,
+            didWin: state.type === 'gameOver' ? state.didWin :
+                state.type === 'postRunSummary' ? state.didWin : false,
+            wavesCleared,
+            enemiesDefeated: this.enemiesDefeated,
+            totalCoinsEarned: this.economySystem.totalCoinsEarned,
+            relicsCollected: this.relicsCollected,
+            ticksSurvived: this.clock.currentTick,
+        };
+    }
+
+    /**
+     * Create a render snapshot (clean DTO for rendering layer)
+     */
+    makeRenderSnapshot(): RenderSnapshot {
+        const renderEnemies: RenderEnemy[] = this.enemies.map(e => ({
+            id: e.instanceId,
+            typeID: e.typeID,
+            pathProgress: e.pathProgress,
+            hpFraction: e.currentHP / e.baseDef.hp,
+            isBoss: e.baseDef.isBoss,
+            isSlowed: e.slowEffect !== null,
+        }));
+
+        const renderTowers: RenderTower[] = this.towers.map(t => ({
+            id: t.instanceId,
+            typeID: t.typeID,
+            gridPosition: t.position,
+            kills: t.kills,
+            totalDamage: t.totalDamage,
+        }));
+
+        return {
+            tick: this.clock.currentTick,
+            enemies: renderEnemies,
+            towers: renderTowers,
+            coins: this.economySystem.coins,
+            lives: this.lives,
+            currentWave: this.currentWave,
+            totalWaves: this.waveSystem.totalWaves,
+            stateType: this.stateMachine.state.type,
+        };
+    }
+
+    // ─── Main Simulation ───
 
     /**
      * Main simulation tick - advances game by one fixed timestep
      */
     tick(): void {
         const tick = this.clock.currentTick;
+        const state = this.stateMachine.state;
 
-        // Check wave spawns
-        if (this.state.type === 'inWave') {
-            const spawns = this.waveSystem.checkSpawns(tick);
-            for (const [typeID, enemyDef] of spawns) {
-                const enemyId = this.nextEnemyId++;
-                const enemy = new Enemy(enemyId, typeID, enemyDef);
-                this.enemies.push(enemy);
-                this.eventLog.emit({
-                    type: 'enemySpawned',
-                    id: enemyId,
-                    enemyType: typeID,
-                    pathProgress: 0.0,
-                    tick,
-                });
-            }
+        // Only process simulation during active wave
+        if (state.type === 'inWave') {
+            this.processWaveTick(tick);
+        }
+
+        this.clock.step();
+    }
+
+    /**
+     * Process player command
+     */
+    processCommand(command: GameCommand): void {
+        this.commandLog.append(command);
+
+        switch (command.type) {
+            case 'placeTower':
+                this.placeTower(command.towerType, command.gridX, command.gridY);
+                break;
+            case 'sellTower':
+                this.sellTower(command.gridX, command.gridY);
+                break;
+            case 'startWave':
+                this.startWave();
+                break;
+            case 'chooseRelic':
+                this.chooseRelic(command.index);
+                break;
+            case 'upgradeTower':
+                // TODO: implement upgrades
+                break;
+        }
+    }
+
+    // ─── Private: Simulation ───
+
+    private processWaveTick(tick: number): void {
+        // Spawn enemies
+        const spawns = this.waveSystem.checkSpawns(tick);
+        for (const [typeID, enemyDef] of spawns) {
+            const enemyId = this.nextEnemyId++;
+            const enemy = new Enemy(enemyId, typeID, enemyDef);
+            this.enemies.push(enemy);
+            this.eventLog.emit({
+                type: 'enemySpawned',
+                id: enemyId,
+                enemyType: typeID,
+                pathProgress: 0.0,
+                tick,
+            });
         }
 
         // Tower firing
@@ -177,7 +300,10 @@ export class GameState {
                     }
 
                     if (result.targetDied) {
-                        const coinReward = target.baseDef.coinReward;
+                        this.enemiesDefeated++;
+                        // Apply coin multiplier from relics
+                        const baseCoinReward = target.baseDef.coinReward;
+                        const coinReward = Math.floor(baseCoinReward * this.relicSystem.combinedCoinMultiplier);
                         this.economySystem.addCoins(coinReward, 'enemy_kill');
                         this.eventLog.emit({
                             type: 'enemyDied',
@@ -222,7 +348,11 @@ export class GameState {
                     });
 
                     if (this.lives <= 0) {
-                        this.state = { type: 'defeat', wavesCompleted: this.waveSystem.currentWave };
+                        this.stateMachine.transition({
+                            type: 'gameOver',
+                            wavesCompleted: this.waveSystem.currentWave,
+                            didWin: false,
+                        });
                         this.eventLog.emit({
                             type: 'gameOver',
                             wavesCompleted: this.waveSystem.currentWave,
@@ -237,84 +367,91 @@ export class GameState {
         this.enemies = this.enemies.filter(e => e.isAlive && !e.hasReachedEnd);
 
         // Check wave completion
-        if (this.state.type === 'inWave') {
+        if (this.stateMachine.state.type === 'inWave') {
             if (this.waveSystem.isWaveSpawningComplete() && this.enemies.length === 0) {
-                const waveIndex = this.state.waveIndex;
-                const waveDef = this.definitions.waves.wave(waveIndex);
+                this.onWaveCompleted(tick);
+            }
+        }
+    }
 
-                if (waveDef) {
-                    this.economySystem.addCoins(waveDef.coinReward, 'wave_complete');
-                    this.eventLog.emit({
-                        type: 'waveCompleted',
-                        index: waveIndex,
-                        reward: waveDef.coinReward,
-                        tick,
-                    });
-                    this.eventLog.emit({
-                        type: 'coinChanged',
-                        newTotal: this.economySystem.coins,
-                        delta: waveDef.coinReward,
-                        reason: 'wave_complete',
-                        tick,
-                    });
-                }
+    private onWaveCompleted(tick: number): void {
+        const state = this.stateMachine.state;
+        if (state.type !== 'inWave') return;
 
-                const nextWaveIndex = waveIndex + 1;
+        const waveIndex = state.waveIndex;
+        const waveDef = this.definitions.waves.wave(waveIndex);
 
-                // Check victory
-                if (nextWaveIndex >= this.waveSystem.totalWaves) {
-                    this.state = { type: 'victory', wavesCompleted: nextWaveIndex };
-                    this.eventLog.emit({
-                        type: 'runCompleted',
-                        wavesCompleted: nextWaveIndex,
-                        totalCoins: this.economySystem.totalCoinsEarned,
-                        tick,
-                    });
-                } else {
-                    // Continue to next wave
-                    this.state = { type: 'building', waveIndex: nextWaveIndex };
-                }
+        // Award wave completion reward
+        if (waveDef) {
+            const coinReward = Math.floor(waveDef.coinReward * this.relicSystem.combinedCoinMultiplier);
+            this.economySystem.addCoins(coinReward, 'wave_complete');
+            this.eventLog.emit({
+                type: 'waveCompleted',
+                index: waveIndex,
+                reward: coinReward,
+                tick,
+            });
+            this.eventLog.emit({
+                type: 'coinChanged',
+                newTotal: this.economySystem.coins,
+                delta: coinReward,
+                reason: 'wave_complete',
+                tick,
+            });
+        }
+
+        const nextWaveIndex = waveIndex + 1;
+
+        // Check victory
+        if (nextWaveIndex >= this.waveSystem.totalWaves) {
+            this.stateMachine.transition({
+                type: 'gameOver',
+                wavesCompleted: nextWaveIndex,
+                didWin: true,
+            });
+            this.eventLog.emit({
+                type: 'runCompleted',
+                wavesCompleted: nextWaveIndex,
+                totalCoins: this.economySystem.totalCoinsEarned,
+                tick,
+            });
+            return;
+        }
+
+        // Check if we should offer relics (every relicOfferInterval waves, starting from wave 1)
+        const completedWaveNumber = waveIndex + 1;  // 1-based
+        if (completedWaveNumber % this.relicOfferInterval === 0) {
+            // Offer relics
+            this.currentRelicOffer = this.relicSystem.generateChoices(this.relicOfferCount);
+            if (this.currentRelicOffer.length > 0) {
+                this.stateMachine.transition({ type: 'relicChoice', waveIndex: nextWaveIndex });
+                this.eventLog.emit({
+                    type: 'relicOffered',
+                    choices: this.currentRelicOffer.map(r => r.id),
+                    tick,
+                });
+                return;
             }
         }
 
-        this.clock.step();
+        // No relic offer — go straight to building phase
+        this.stateMachine.transition({ type: 'building', waveIndex: nextWaveIndex });
     }
 
-    /**
-     * Process player command
-     */
-    processCommand(command: GameCommand): void {
-        this.commandLog.append(command);
-
-        switch (command.type) {
-            case 'placeTower':
-                this.placeTower(command.towerType, command.gridX, command.gridY);
-                break;
-            case 'sellTower':
-                this.sellTower(command.gridX, command.gridY);
-                break;
-            case 'startWave':
-                this.startWave();
-                break;
-            case 'chooseRelic':
-                this.chooseRelic(command.index);
-                break;
-            case 'upgradeTower':
-                // TODO: implement upgrades
-                break;
-        }
-    }
-
-    // MARK: - Private Implementation
+    // ─── Private: Commands ───
 
     private placeTower(type: string, gridX: number, gridY: number): void {
-        if (this.state.type !== 'building') return;
+        if (this.stateMachine.state.type !== 'building') return;
 
         const position = new GridPosition(gridX, gridY);
         const posKey = position.hashCode();
 
         // Check if spot is occupied
         if (this.towerGrid.has(posKey)) return;
+
+        // Check map validity (path tiles, blocked tiles, bounds)
+        const mapDef = this.definitions.maps.map(this.mapID)!;
+        if (!isValidPlacement(mapDef, position)) return;
 
         const towerDef = this.definitions.towers.tower(type);
         if (!towerDef) return;
@@ -326,6 +463,12 @@ export class GameState {
         this.economySystem.spendCoins(towerDef.cost);
         const towerId = this.nextTowerId++;
         const tower = new Tower(towerId, type, position, towerDef);
+
+        // Apply relic modifiers to new tower
+        tower.damageMultiplier = this.relicSystem.combinedDamageMultiplier;
+        tower.rangeMultiplier = this.relicSystem.combinedRangeMultiplier;
+        tower.fireRateMultiplier = this.relicSystem.combinedFireRateMultiplier;
+        tower.slowOnHit = this.relicSystem.combinedSlowOnHit;
 
         this.towers.push(tower);
         this.towerGrid.set(posKey, tower);
@@ -349,7 +492,7 @@ export class GameState {
     }
 
     private sellTower(gridX: number, gridY: number): void {
-        if (this.state.type !== 'building') return;
+        if (this.stateMachine.state.type !== 'building') return;
 
         const position = new GridPosition(gridX, gridY);
         const posKey = position.hashCode();
@@ -357,7 +500,8 @@ export class GameState {
 
         if (!tower) return;
 
-        const refund = Math.floor(tower.baseDef.cost * 0.7);
+        // Swift uses cost / 2 (50% refund)
+        const refund = Math.floor(tower.baseDef.cost / 2);
         this.economySystem.addCoins(refund, 'tower_sell');
 
         this.towers = this.towers.filter(t => t.instanceId !== tower.instanceId);
@@ -380,13 +524,13 @@ export class GameState {
     }
 
     private startWave(): void {
-        if (this.state.type !== 'building') return;
+        if (this.stateMachine.state.type !== 'building') return;
 
-        const waveIndex = this.state.waveIndex;
+        const waveIndex = this.stateMachine.state.waveIndex;
         const waveDef = this.waveSystem.startWave(this.currentTick);
 
         if (waveDef) {
-            this.state = { type: 'inWave', waveIndex };
+            this.stateMachine.transition({ type: 'inWave', waveIndex });
             this.eventLog.emit({
                 type: 'waveStarted',
                 index: waveIndex,
@@ -397,7 +541,31 @@ export class GameState {
     }
 
     private chooseRelic(index: number): void {
-        // TODO: Implement relic selection
-        console.log(`Choose relic ${index}`);
+        if (this.stateMachine.state.type !== 'relicChoice') return;
+        if (!this.currentRelicOffer) return;
+        if (index < 0 || index >= this.currentRelicOffer.length) return;
+
+        const chosenRelic = this.currentRelicOffer[index];
+        this.relicSystem.chooseRelic(chosenRelic.id);
+        this.relicsCollected++;
+
+        this.eventLog.emit({
+            type: 'relicChosen',
+            relicID: chosenRelic.id,
+            tick: this.currentTick,
+        });
+
+        // Update all existing towers with new relic modifiers
+        for (const tower of this.towers) {
+            tower.damageMultiplier = this.relicSystem.combinedDamageMultiplier;
+            tower.rangeMultiplier = this.relicSystem.combinedRangeMultiplier;
+            tower.fireRateMultiplier = this.relicSystem.combinedFireRateMultiplier;
+            tower.slowOnHit = this.relicSystem.combinedSlowOnHit;
+        }
+
+        // Clear offer and transition to building
+        const nextWaveIndex = this.stateMachine.state.waveIndex;
+        this.currentRelicOffer = null;
+        this.stateMachine.transition({ type: 'building', waveIndex: nextWaveIndex });
     }
 }
