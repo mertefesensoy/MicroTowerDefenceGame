@@ -245,7 +245,7 @@ export class GameState {
                 this.chooseRelic(command.index);
                 break;
             case 'upgradeTower':
-                // TODO: implement upgrades
+                this.upgradeTower(command.gridX, command.gridY, command.upgradePath);
                 break;
         }
     }
@@ -465,10 +465,7 @@ export class GameState {
         const tower = new Tower(towerId, type, position, towerDef);
 
         // Apply relic modifiers to new tower
-        tower.damageMultiplier = this.relicSystem.combinedDamageMultiplier;
-        tower.rangeMultiplier = this.relicSystem.combinedRangeMultiplier;
-        tower.fireRateMultiplier = this.relicSystem.combinedFireRateMultiplier;
-        tower.slowOnHit = this.relicSystem.combinedSlowOnHit;
+        this.applyRelicModifiersInternal(tower);
 
         this.towers.push(tower);
         this.towerGrid.set(posKey, tower);
@@ -567,5 +564,84 @@ export class GameState {
         const nextWaveIndex = this.stateMachine.state.waveIndex;
         this.currentRelicOffer = null;
         this.stateMachine.transition({ type: 'building', waveIndex: nextWaveIndex });
+    }
+
+    private applyRelicModifiersInternal(tower: Tower): void {
+        tower.damageMultiplier = this.relicSystem.combinedDamageMultiplier;
+        tower.rangeMultiplier = this.relicSystem.combinedRangeMultiplier;
+        tower.fireRateMultiplier = this.relicSystem.combinedFireRateMultiplier;
+        tower.slowOnHit = this.relicSystem.combinedSlowOnHit;
+    }
+
+    /**
+     * Upgrade a tower to a new type
+     */
+    upgradeTower(gridX: number, gridY: number, newTypeID: string): void {
+        // Must be in building phase
+        if (this.stateMachine.state.type !== 'building') return;
+
+        const pos = new GridPosition(gridX, gridY);
+        const posKey = pos.hashCode();
+        const oldTower = this.towerGrid.get(posKey);
+
+        if (!oldTower) return;
+
+        // Verify upgrade path
+        if (!oldTower.baseDef.upgradePaths.includes(newTypeID)) {
+            return;
+        }
+
+        const newDef = this.definitions.towers.tower(newTypeID);
+        if (!newDef) return;
+
+        // Cost logic: Pay difference (NewCost - OldCost).
+        // Since we refunded 50% on sell, let's treat update as:
+        // "Sell old (auto-refund)" + "Buy new (full cost)". 
+        // Net cost = newDef.cost - (oldDef.cost / 2).
+        // However, Swift TODO didn't specify.
+        // Let's go with a simple Pay Difference for now to encourage upgrades.
+        const upgradeCost = Math.max(0, newDef.cost - oldTower.baseDef.cost);
+
+        if (!this.economySystem.canAfford(upgradeCost)) return;
+
+        // Apply transaction
+        if (upgradeCost > 0) {
+            this.economySystem.spendCoins(upgradeCost);
+        }
+
+        // Remove old tower
+        this.towers = this.towers.filter(t => t.instanceId !== oldTower.instanceId);
+        this.towerGrid.delete(posKey);
+
+        // Create new tower (preserving ID? No, new ID for safety)
+        const newTowerId = oldTower.instanceId; // Reuse ID to keep selection context if possible?
+        // Let's use new ID to be safe with React keys
+        // const newTowerId = this.nextTowerId++; 
+
+        // Actually, reusing ID is better for "it's the same tower but better"
+        const newTower = new Tower(newTowerId, newTypeID, pos, newDef);
+
+        // Apply relic modifiers
+        this.applyRelicModifiersInternal(newTower);
+
+        this.towers.push(newTower);
+        this.towerGrid.set(posKey, newTower);
+
+        this.eventLog.emit({
+            type: 'towerPlaced', // Re-use placed event for now
+            id: newTower.instanceId,
+            towerType: newTypeID,
+            gridX,
+            gridY,
+            tick: this.currentTick
+        });
+
+        this.eventLog.emit({
+            type: 'coinChanged',
+            newTotal: this.economySystem.coins,
+            delta: -upgradeCost,
+            reason: 'tower_upgrade',
+            tick: this.currentTick
+        });
     }
 }

@@ -1,122 +1,80 @@
 // PostRunSummary.tsx
 // Shows run results after game ends
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import type { RunResult } from '../persistence/RunResult';
-import { getRunStats } from '../persistence/RunResult';
+import type { PostRunPresentation } from './PostRunPresentation';
 
 interface PostRunSummaryProps {
-    result: RunResult;
+    presentation: PostRunPresentation;
     onRestart: () => void;
     onMainMenu: () => void;
 }
 
-export function PostRunSummary({ result, onRestart, onMainMenu }: PostRunSummaryProps) {
-    const [stats, setStats] = useState<{
-        totalRuns: number;
-        victories: number;
-        defeats: number;
-        avgWavesCompleted: number;
-        bestRun: RunResult | null;
-    } | null>(null);
-
-    useEffect(() => {
-        getRunStats().then(setStats);
-    }, []);
-
-    const formatDuration = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const formatDate = (timestamp: number) => {
-        return new Date(timestamp).toLocaleDateString();
-    };
+export function PostRunSummary({ presentation, onRestart, onMainMenu }: PostRunSummaryProps) {
+    // No internal state needed, strictly presentational
 
     return (
         <View style={styles.container}>
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={[styles.title, result.isVictory ? styles.victory : styles.defeat]}>
-                        {result.isVictory ? '🎉 VICTORY!' : '💀 DEFEAT'}
+                    <Text style={[styles.title, presentation.didWin ? styles.victory : styles.defeat]}>
+                        {presentation.didWin ? '🎉 VICTORY!' : '💀 DEFEAT'}
                     </Text>
                     <Text style={styles.subtitle}>
-                        {result.wavesCompleted} wave{result.wavesCompleted !== 1 ? 's' : ''} completed
+                        {presentation.wavesCompleted} wave{presentation.wavesCompleted !== 1 ? 's' : ''} completed
                     </Text>
                 </View>
 
-                {/* Run Stats */}
+                {/* Progression (XP & Level) */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>This Run</Text>
-                    <View style={styles.statGrid}>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{result.wavesCompleted}</Text>
-                            <Text style={styles.statLabel}>Waves</Text>
+                    <Text style={styles.sectionTitle}>Progression</Text>
+                    <View style={styles.statRow}>
+                        <Text style={styles.statText}>XP Gained: +{presentation.xpGained}</Text>
+                    </View>
+                    <View style={styles.xpContainer}>
+                        <Text style={styles.statText}>Level {presentation.startLevel} → {presentation.endLevel}</Text>
+                        <View style={styles.xpBarBackground}>
+                            <View style={[styles.xpBarFill, { width: `${presentation.endFraction * 100}%` }]} />
                         </View>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{result.totalCoins}</Text>
-                            <Text style={styles.statLabel}>Coins</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{result.totalKills}</Text>
-                            <Text style={styles.statLabel}>Kills</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{Math.round(result.totalDamage)}</Text>
-                            <Text style={styles.statLabel}>Damage</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{result.finalLives}</Text>
-                            <Text style={styles.statLabel}>Lives Left</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{formatDuration(result.durationSeconds)}</Text>
-                            <Text style={styles.statLabel}>Time</Text>
-                        </View>
+                        {presentation.endLevel > presentation.startLevel && (
+                            <Text style={styles.levelUpText}>✨ LEVEL UP! ✨</Text>
+                        )}
                     </View>
                 </View>
 
-                {/* Overall Stats */}
-                {stats && (
+                {/* Unlocks */}
+                {presentation.unlocks.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Overall Stats</Text>
-                        <View style={styles.statRow}>
-                            <Text style={styles.statText}>Total Runs: {stats.totalRuns}</Text>
-                        </View>
-                        <View style={styles.statRow}>
-                            <Text style={styles.statText}>
-                                Victories: {stats.victories} ({Math.round((stats.victories / stats.totalRuns) * 100)}%)
-                            </Text>
-                        </View>
-                        <View style={styles.statRow}>
-                            <Text style={styles.statText}>
-                                Defeats: {stats.defeats}
-                            </Text>
-                        </View>
-                        <View style={styles.statRow}>
-                            <Text style={styles.statText}>
-                                Avg Waves: {stats.avgWavesCompleted}
-                            </Text>
-                        </View>
+                        <Text style={styles.sectionTitle}>New Unlocks</Text>
+                        {presentation.unlocks.map(id => (
+                            <Text key={id} style={styles.unlockText}>🔓 {id}</Text>
+                        ))}
                     </View>
                 )}
 
-                {/* Best Run */}
-                {stats?.bestRun && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Best Run</Text>
-                        <View style={styles.bestRunCard}>
-                            <Text style={styles.bestRunText}>
-                                {stats.bestRun.wavesCompleted} waves • {stats.bestRun.totalCoins} coins
-                            </Text>
-                            <Text style={styles.bestRunDate}>
-                                {formatDate(stats.bestRun.timestamp)}
-                            </Text>
+                {/* Run Stats */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Run Statistics</Text>
+                    <View style={styles.statGrid}>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statValue}>{presentation.wavesCompleted}</Text>
+                            <Text style={styles.statLabel}>Waves</Text>
+                        </View>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statValue}>{presentation.totalCoins}</Text>
+                            <Text style={styles.statLabel}>Coins Earned</Text>
+                        </View>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statValue}>{presentation.durationStats}</Text>
                         </View>
                     </View>
+                </View>
+
+                {/* Persistence Status */}
+                {presentation.saveStatus.type === 'failed' && (
+                    <Text style={styles.errorText}>⚠️ Save Failed: {presentation.saveStatus.errorMessage}</Text>
                 )}
             </ScrollView>
 
@@ -232,6 +190,38 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 8,
         alignItems: 'center',
+    },
+    xpContainer: {
+        marginTop: 12,
+        marginBottom: 8,
+    },
+    xpBarBackground: {
+        height: 12,
+        backgroundColor: '#444',
+        borderRadius: 6,
+        marginTop: 8,
+        overflow: 'hidden',
+    },
+    xpBarFill: {
+        height: '100%',
+        backgroundColor: '#16f2b3',
+    },
+    levelUpText: {
+        color: '#ffd700',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginTop: 8,
+        fontSize: 16,
+    },
+    unlockText: {
+        color: '#fff',
+        fontSize: 16,
+        marginBottom: 4,
+    },
+    errorText: {
+        color: '#ff4444',
+        textAlign: 'center',
+        marginBottom: 16,
     },
     menuButton: {
         flex: 1,
