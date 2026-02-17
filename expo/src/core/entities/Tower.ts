@@ -25,7 +25,9 @@ export class Tower {
         public readonly typeID: string,
         public readonly position: GridPosition,
         public readonly baseDef: TowerDef
-    ) { }
+    ) {
+        this.slowOnHit = this.baseDef.slowOnHit || 0.0;
+    }
 
     get ticksSinceLastFire(): number {
         return this._ticksSinceLastFire;

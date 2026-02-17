@@ -33,8 +33,16 @@ const ENEMY_DATA: EnemyDef[] = [
 
 const TOWER_DATA: TowerDef[] = [
     { id: "cannon", name: "Cannon Tower", cost: 100, range: 2.5, fireRate: 1.0, damage: 20.0, description: "Basic single-target damage tower", upgradePaths: ["heavy", "rapid"] },
-    { id: "frost", name: "Frost Tower", cost: 120, range: 2.0, fireRate: 2.0, damage: 5.0, description: "Slows enemies on hit", upgradePaths: ["deep_freeze", "wide_chill"] },
-    { id: "bomb", name: "Bomb Tower", cost: 150, range: 3.0, fireRate: 0.5, damage: 50.0, description: "High damage splash tower", upgradePaths: ["napalm", "cluster"] }
+    { id: "frost", name: "Frost Tower", cost: 120, range: 2.0, fireRate: 2.0, damage: 5.0, description: "Slows enemies on hit", slowOnHit: 0.3, upgradePaths: ["deep_freeze", "wide_chill"] },
+    { id: "bomb", name: "Bomb Tower", cost: 150, range: 3.0, fireRate: 0.5, damage: 50.0, description: "High damage splash tower", upgradePaths: ["napalm", "cluster"] },
+
+    // Upgrades
+    { id: "heavy", name: "Heavy Cannon", cost: 250, range: 2.5, fireRate: 0.8, damage: 60.0, description: "High single-shot damage", upgradePaths: [] },
+    { id: "rapid", name: "Rapid Fire", cost: 220, range: 2.5, fireRate: 2.5, damage: 15.0, description: "Fast firing speed", upgradePaths: [] },
+    { id: "deep_freeze", name: "Deep Freeze", cost: 280, range: 2.0, fireRate: 2.0, damage: 10.0, description: "Stronger slow effect", upgradePaths: [] },
+    { id: "wide_chill", name: "Wide Chill", cost: 260, range: 3.5, fireRate: 2.0, damage: 5.0, description: "Larger slow usage", upgradePaths: [] },
+    { id: "napalm", name: "Napalm", cost: 350, range: 3.0, fireRate: 0.5, damage: 40.0, description: "Burning ground effect", upgradePaths: [] }, // TODO: Implement burn
+    { id: "cluster", name: "Cluster Bomb", cost: 330, range: 3.5, fireRate: 0.5, damage: 80.0, description: "Larger explosion area", upgradePaths: [] }
 ];
 
 const WAVE_DATA: WaveDef[] = [

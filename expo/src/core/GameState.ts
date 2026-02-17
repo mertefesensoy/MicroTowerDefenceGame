@@ -80,6 +80,8 @@ export class GameState {
         this.clock = new SimulationClock();
         this.waveSystem = new WaveSystem(definitions.waves, definitions.enemies, this.rng);
 
+
+
         const mapDef = definitions.maps.map(mapID);
         if (!mapDef) throw new Error(`Map ${mapID} not found`);
         this.combatSystem = new CombatSystem(mapDef);
@@ -334,6 +336,7 @@ export class GameState {
                 if (enemy.hasReachedEnd) {
                     const livesCost = enemy.baseDef.livesCost;
                     this.lives -= livesCost;
+
                     this.eventLog.emit({
                         type: 'enemyLeaked',
                         id: enemy.instanceId,

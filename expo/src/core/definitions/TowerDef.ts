@@ -12,6 +12,7 @@ export interface TowerDef {
     fireRate: number;  // attacks per second
     damage: number;
     description: string;
+    slowOnHit?: number; // 0.0 to 1.0
     upgradePaths: string[];
 }
 
