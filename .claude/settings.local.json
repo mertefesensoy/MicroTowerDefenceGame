@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find /c/Users/senso/OneDrive/Masaüstü/CVWebpage/MicroTowerDefenceGame/expo/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))"
+      "Bash(find /c/Users/senso/OneDrive/Masaüstü/CVWebpage/MicroTowerDefenceGame/expo/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(npx expo:*)"
     ]
   }
 }

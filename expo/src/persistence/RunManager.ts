@@ -18,7 +18,6 @@ import { ProgressionSystem } from '../core/systems/ProgressionSystem';
  */
 export class RunManager {
     private readonly store: ProfileStoreInterface;
-    private readonly rules: ProgressionRules;
     private readonly progressionSystem: ProgressionSystem;
 
     public profile: ProgressionProfile;
@@ -35,7 +34,6 @@ export class RunManager {
         lastRun: LastRunMetadata | null,
     ) {
         this.store = store;
-        this.rules = rules;
         this.progressionSystem = new ProgressionSystem(rules);
         this.profile = profile;
         this.lastRun = lastRun;

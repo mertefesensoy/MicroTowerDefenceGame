@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Pressable, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Pressable, useWindowDimensions, AppState, AppStateStatus } from 'react-native';
 import { Canvas } from '@shopify/react-native-skia';
 import { GameState } from '../core/GameState';
 import { GameDefinitions } from '../core/definitions/GameDefinitions';
@@ -16,6 +16,8 @@ import { TowerDetails } from '../screens/TowerDetails';
 const BASE_TOWER_IDS = ['cannon', 'frost', 'bomb'];
 
 const TICK_MS = 1000 / 60;
+const SPEED_OPTIONS = [1, 2, 4] as const;
+type GameSpeed = typeof SPEED_OPTIONS[number];
 
 interface GameCanvasProps {
     definitions: GameDefinitions;
@@ -42,6 +44,11 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
     const [selectedTowerType, setSelectedTowerType] = useState<string>('cannon');
     // UI state: ID of the placed tower currently selected (for TowerDetails)
     const [selectedTowerId, setSelectedTowerId] = useState<number | null>(null);
+    // Pause/speed state
+    const [paused, setPaused] = useState(false);
+    const [gameSpeed, setGameSpeed] = useState<GameSpeed>(1);
+    const pausedRef = useRef(false);
+    const gameSpeedRef = useRef<GameSpeed>(1);
 
     // Map layout — stable for the lifetime of this component
     const mapDef = useMemo(() => definitions.maps.map('default')!, [definitions]);
@@ -54,6 +61,20 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
         () => BASE_TOWER_IDS.map(id => definitions.towers.tower(id)!).filter(Boolean),
         [definitions],
     );
+
+    // Keep refs in sync so the RAF loop reads current values without re-subscribing
+    pausedRef.current = paused;
+    gameSpeedRef.current = gameSpeed;
+
+    // ─── Pause on app background ───
+    useEffect(() => {
+        const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+            if (state !== 'active') {
+                setPaused(true);
+            }
+        });
+        return () => sub.remove();
+    }, []);
 
     // ─── Game Loop (requestAnimationFrame + fixed-timestep accumulator) ───
     useEffect(() => {
@@ -70,17 +91,21 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
             // Cap delta to 100ms to prevent the spiral-of-death on slow frames
             const delta = Math.min(time - lastTime, 100);
             lastTime = time;
-            accumulator += delta;
 
-            while (accumulator >= TICK_MS) {
-                game.tick();
-                snapshotRef.current = game.makeRenderSnapshot();
-                accumulator -= TICK_MS;
+            // When paused: keep RAF alive for UI, but don't accumulate simulation time
+            if (!pausedRef.current) {
+                accumulator += delta * gameSpeedRef.current;
 
-                if (snapshotRef.current.stateType === 'gameOver') {
-                    gameEndedRef.current = true;
-                    setTimeout(() => onGameEnd(game.makeRunSummary()), 500);
-                    break;
+                while (accumulator >= TICK_MS) {
+                    game.tick();
+                    snapshotRef.current = game.makeRenderSnapshot();
+                    accumulator -= TICK_MS;
+
+                    if (snapshotRef.current.stateType === 'gameOver') {
+                        gameEndedRef.current = true;
+                        setTimeout(() => onGameEnd(game.makeRunSummary()), 500);
+                        break;
+                    }
                 }
             }
 
@@ -125,11 +150,11 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
         );
 
         if (existing) {
-            // Select placed tower — enter inspect mode
+            // Select placed tower — works during both building and wave phases
             setSelectedTowerId(existing.id);
             setSelectedTowerType('');
         } else if (selectedTowerType && snapshot.stateType === 'building') {
-            // Place tower
+            // Place tower (only during building phase)
             game.processCommand({
                 type: 'placeTower',
                 towerType: selectedTowerType,
@@ -175,6 +200,17 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
             game.processCommand({ type: 'startWave', tick: game.currentTick });
         }
     }, [game]);
+
+    const handleTogglePause = useCallback(() => {
+        setPaused(p => !p);
+    }, []);
+
+    const handleCycleSpeed = useCallback(() => {
+        setGameSpeed(current => {
+            const idx = SPEED_OPTIONS.indexOf(current);
+            return SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length];
+        });
+    }, []);
 
     // ─── Render ───
 
@@ -250,6 +286,25 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
                         <Text style={styles.buttonText}>
                             {isBuilding ? 'Start Wave' : 'Wave Active'}
                         </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Pause + Speed controls */}
+                <View style={styles.gameControls}>
+                    <TouchableOpacity
+                        style={[styles.controlButton, paused && styles.controlButtonActive]}
+                        onPress={handleTogglePause}
+                    >
+                        <Text style={styles.controlButtonText}>
+                            {paused ? '▶ Resume' : '⏸ Pause'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.controlButton}
+                        onPress={handleCycleSpeed}
+                    >
+                        <Text style={styles.controlButtonText}>{gameSpeed}x</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -334,5 +389,25 @@ const styles = StyleSheet.create({
         color: '#ffffffcc',
         fontSize: 11,
         marginTop: 2,
+    },
+    gameControls: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 8,
+    },
+    controlButton: {
+        flex: 1,
+        backgroundColor: '#2a2a3e',
+        padding: 8,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    controlButtonActive: {
+        backgroundColor: '#16f2b3',
+    },
+    controlButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 14,
     },
 });

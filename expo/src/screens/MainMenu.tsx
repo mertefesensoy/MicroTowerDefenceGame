@@ -72,10 +72,7 @@ export function MainMenu({ onStartGame }: MainMenuProps) {
             )}
 
             <View style={styles.footer}>
-                <Text style={styles.footerText}>
-                    ✅ Phase C0-C4 Complete{'\n'}
-                    🎯 Ready for EAS Build (Phase C5)
-                </Text>
+                <Text style={styles.footerText}>Micro Tower Defence</Text>
             </View>
         </View>
     );
@@ -89,7 +86,7 @@ const styles = StyleSheet.create({
     },
     header: {
         alignItems: 'center',
-        marginTop: 60,
+        marginTop: 20,
         marginBottom: 40,
     },
     title: {

@@ -28,7 +28,7 @@ export class ConsoleProfileStoreLogger implements ProfileStoreLogger {
         );
     }
 
-    didHandleCorruption(policy: string, storageKey: string, backupKey: string | undefined): void {
+    didHandleCorruption(policy: string, _storageKey: string, backupKey: string | undefined): void {
         if (backupKey) {
             console.warn(
                 `[ProfileStore] Corruption detected (policy=${policy}): backed up to ${backupKey}`

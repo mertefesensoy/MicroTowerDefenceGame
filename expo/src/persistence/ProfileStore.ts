@@ -130,7 +130,7 @@ export class AsyncStorageProfileStore implements ProfileStoreInterface {
 
     private async handleCorruption(
         rawData: string,
-        rules: ProgressionRules,
+        _rules: ProgressionRules,
         error: unknown,
     ): Promise<{ profile: ProgressionProfile; lastRun: LastRunMetadata | null }> {
         switch (this.corruptPolicy) {

@@ -11,16 +11,11 @@ describe('GoldenSeed', () => {
         // Advance a few ticks to let initial generation happen
         // (Though generation happens in constructor usually)
 
-        // Snapshot some state
-        const firstWave = game.definitions.waves.wave(0)!;
-        const initialCoins = game.currentCoins;
-
-        // In Swift we checked specific enemy spawn coordinates or relic offers.
-        // For now, let's verify initial state matches expectation.
-
-        expect(initialCoins).toBe(200); // Default starting coins
-        expect(game.waveSystem.currentWaveIndex).toBe(-1);
-
-        // TODO: Add more specific checks once we have deeper generation logic to pin down.
+        // Verify initial state matches expectation (public API only)
+        expect(game.currentCoins).toBe(200); // Default starting coins
+        expect(game.currentState.type).toBe('building');
+        expect(game.currentWave).toBe(0); // First wave index via state machine
+        expect(game.currentLives).toBe(20);
+        expect(game.currentTick).toBe(0);
     });
 });

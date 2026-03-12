@@ -1,13 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { MainMenu } from './src/screens/MainMenu';
 import { GameCanvas } from './src/rendering/GameCanvas';
 import { PostRunSummary } from './src/screens/PostRunSummary';
 import { RunManager } from './src/persistence/RunManager';
 import { AsyncStorageProfileStore as ProfileStore } from './src/persistence/ProfileStore';
 import { createDefaultDefinitions, GameDefinitions } from './src/core/definitions/GameDefinitions';
-import { RunSummary, ProgressionRules, RunSummary as IRunSummary } from './src/core/definitions/ProgressionTypes';
+import { RunSummary, ProgressionRules } from './src/core/definitions/ProgressionTypes';
 import { createPostRunPresentation, PostRunPresentation } from './src/screens/PostRunPresentation';
 import { ErrorBoundary } from './src/ErrorBoundary';
 
@@ -109,12 +110,9 @@ function RootApp() {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
             {screen === 'menu' && (
-                <MainMenu
-                    onStartGame={handleStartGame}
-                // Pass profile for level display if MainMenu supports it (TODO)
-                />
+                <MainMenu onStartGame={handleStartGame} />
             )}
 
             {screen === 'game' && (
@@ -133,7 +131,7 @@ function RootApp() {
                 />
             )}
             <StatusBar style="light" />
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -157,8 +155,10 @@ const styles = StyleSheet.create({
 
 export default function App() {
     return (
-        <ErrorBoundary>
-            <RootApp />
-        </ErrorBoundary>
+        <SafeAreaProvider>
+            <ErrorBoundary>
+                <RootApp />
+            </ErrorBoundary>
+        </SafeAreaProvider>
     );
 }

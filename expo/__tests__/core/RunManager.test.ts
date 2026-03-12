@@ -6,7 +6,7 @@ class MockProfileStore implements ProfileStoreInterface {
     profile = createDefaultProfile();
     lastRun: LastRunMetadata | null = null;
 
-    async load(rules: ProgressionRules) {
+    async load(_rules: ProgressionRules) {
         return { profile: { ...this.profile }, lastRun: this.lastRun };
     }
 
