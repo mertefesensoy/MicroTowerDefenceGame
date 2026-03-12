@@ -1,6 +1,8 @@
 // MapRenderer.tsx
-// Renders game map, grid, and path using Skia
+// Renders the game grid and enemy path using Skia.
+// Path is memoized — it only needs to be recreated if the map layout or cell size changes.
 
+import { useMemo } from 'react';
 import { Rect, Path, Circle, Skia } from '@shopify/react-native-skia';
 import type { MapDef } from '../core/definitions/MapDef';
 
@@ -12,31 +14,27 @@ interface MapRendererProps {
 }
 
 export function MapRenderer({ mapDef, cellSize, offsetX, offsetY }: MapRendererProps) {
-    // Create path from waypoints
-    const createPath = () => {
+    // Build Skia path once — the map and cell size are stable during a run.
+    // This prevents allocating a new path object on every frame (~60/s).
+    const enemyPath = useMemo(() => {
         if (mapDef.waypoints.length === 0) return null;
 
         const path = Skia.Path.Make();
         const sorted = [...mapDef.waypoints].sort((a, b) => a.pathProgress - b.pathProgress);
 
-        const firstWp = sorted[0];
         path.moveTo(
-            offsetX + firstWp.position.x * cellSize + cellSize / 2,
-            offsetY + firstWp.position.y * cellSize + cellSize / 2
+            offsetX + sorted[0].position.x * cellSize + cellSize / 2,
+            offsetY + sorted[0].position.y * cellSize + cellSize / 2,
         );
-
         for (let i = 1; i < sorted.length; i++) {
-            const wp = sorted[i];
             path.lineTo(
-                offsetX + wp.position.x * cellSize + cellSize / 2,
-                offsetY + wp.position.y * cellSize + cellSize / 2
+                offsetX + sorted[i].position.x * cellSize + cellSize / 2,
+                offsetY + sorted[i].position.y * cellSize + cellSize / 2,
             );
         }
 
         return path;
-    };
-
-    const enemyPath = createPath();
+    }, [mapDef, cellSize, offsetX, offsetY]);
 
     return (
         <>
@@ -49,7 +47,7 @@ export function MapRenderer({ mapDef, cellSize, offsetX, offsetY }: MapRendererP
                 color="#1a1a2e"
             />
 
-            {/* Grid lines */}
+            {/* Vertical grid lines */}
             {Array.from({ length: mapDef.gridWidth + 1 }).map((_, i) => (
                 <Rect
                     key={`v-${i}`}
@@ -60,6 +58,8 @@ export function MapRenderer({ mapDef, cellSize, offsetX, offsetY }: MapRendererP
                     color="#2a2a3e"
                 />
             ))}
+
+            {/* Horizontal grid lines */}
             {Array.from({ length: mapDef.gridHeight + 1 }).map((_, i) => (
                 <Rect
                     key={`h-${i}`}

@@ -1,18 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, Text, Pressable } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, Pressable, useWindowDimensions } from 'react-native';
 import { Canvas } from '@shopify/react-native-skia';
 import { GameState } from '../core/GameState';
 import { GameDefinitions } from '../core/definitions/GameDefinitions';
 import type { RunSummary } from '../core/definitions/ProgressionTypes';
+import type { RenderSnapshot } from '../core/systems/RenderSnapshot';
+import type { Tower } from '../core/entities/Tower';
 import { MapRenderer } from './MapRenderer';
 import { TowerRenderer } from './TowerRenderer';
 import { EnemyRenderer } from './EnemyRenderer';
-import type { Tower } from '../core/entities/Tower';
-import type { Enemy } from '../core/entities/Enemy';
 import { RelicChoiceModal } from '../screens/RelicChoiceModal';
 import { TowerDetails } from '../screens/TowerDetails';
 
-const { width, height } = Dimensions.get('window');
+// IDs of base (purchasable) towers — upgrades are excluded
+const BASE_TOWER_IDS = ['cannon', 'frost', 'bomb'];
+
+const TICK_MS = 1000 / 60;
 
 interface GameCanvasProps {
     definitions: GameDefinitions;
@@ -21,82 +24,125 @@ interface GameCanvasProps {
 }
 
 export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps) {
+    const { width, height } = useWindowDimensions();
+
+    // Game engine — created once per run
     const [game] = useState(() => new GameState(runSeed, definitions));
-    const [tick, setTick] = useState(0);
-    const [towers, setTowers] = useState<Tower[]>([]);
-    const [enemies, setEnemies] = useState<Enemy[]>([]);
-    const [selectedTowerType, setSelectedTowerType] = useState<string | null>('archer');
-    const [selectedTower, setSelectedTower] = useState<Tower | null>(null);
+
+    // Snapshot ref — updated in the RAF loop, never triggers re-renders on its own
+    const snapshotRef = useRef<RenderSnapshot>(game.makeRenderSnapshot());
+
+    // Single frame counter — the only React state that drives 60fps re-renders
+    const [, setFrameCount] = useState(0);
+
+    // Game-over guard — prevents calling onGameEnd more than once
     const gameEndedRef = useRef(false);
 
-    const mapDef = game.definitions.maps.map('default')!;
+    // UI state: what tower type is selected for placement
+    const [selectedTowerType, setSelectedTowerType] = useState<string>('cannon');
+    // UI state: ID of the placed tower currently selected (for TowerDetails)
+    const [selectedTowerId, setSelectedTowerId] = useState<number | null>(null);
+
+    // Map layout — stable for the lifetime of this component
+    const mapDef = useMemo(() => definitions.maps.map('default')!, [definitions]);
     const cellSize = Math.min(width, height - 200) / Math.max(mapDef.gridWidth, mapDef.gridHeight);
     const offsetX = (width - mapDef.gridWidth * cellSize) / 2;
     const offsetY = 50;
 
-    // Game loop
+    // Base tower defs for placement buttons — derived from definitions, not hardcoded
+    const baseTowers = useMemo(
+        () => BASE_TOWER_IDS.map(id => definitions.towers.tower(id)!).filter(Boolean),
+        [definitions],
+    );
+
+    // ─── Game Loop (requestAnimationFrame + fixed-timestep accumulator) ───
     useEffect(() => {
-        const interval = setInterval(() => {
-            game.tick();
-            setTick(game.currentTick);
-            setTowers(game.getTowers() as Tower[]);
-            setEnemies(game.getEnemies() as Enemy[]);
+        let raf: number;
+        let lastTime = -1;
+        let accumulator = 0;
 
-            // Check for game end
-            const state = game.currentState;
-            if (state.type === 'gameOver' && !gameEndedRef.current) {
-                gameEndedRef.current = true;
+        const loop = (time: number) => {
+            if (gameEndedRef.current) return;
 
-                gameEndedRef.current = true;
+            // First frame: initialise lastTime without accumulating a huge delta
+            if (lastTime < 0) lastTime = time;
 
-                // Generate canonical run summary
-                const summary = game.makeRunSummary();
+            // Cap delta to 100ms to prevent the spiral-of-death on slow frames
+            const delta = Math.min(time - lastTime, 100);
+            lastTime = time;
+            accumulator += delta;
 
-                // Small delay to show final state
-                setTimeout(() => onGameEnd(summary), 500);
+            while (accumulator >= TICK_MS) {
+                game.tick();
+                snapshotRef.current = game.makeRenderSnapshot();
+                accumulator -= TICK_MS;
+
+                if (snapshotRef.current.stateType === 'gameOver') {
+                    gameEndedRef.current = true;
+                    setTimeout(() => onGameEnd(game.makeRunSummary()), 500);
+                    break;
+                }
             }
-        }, 1000 / 60);
 
-        return () => clearInterval(interval);
+            setFrameCount(c => c + 1);
+
+            if (!gameEndedRef.current) {
+                raf = requestAnimationFrame(loop);
+            }
+        };
+
+        raf = requestAnimationFrame(loop);
+        return () => cancelAnimationFrame(raf);
     }, [game, onGameEnd]);
 
-    const handleCanvasTap = (x: number, y: number) => {
-        // If we are in relic choice, we shouldn't be tapping canvas for towers
-        if (game.currentState.type === 'relicChoice') return;
+    // ─── Get selected tower — always a fresh lookup from the game engine ───
+    // Using ID lookup avoids the stale-reference problem after upgrades.
+    // GameState preserves tower instanceId across upgrades so this stays valid.
+    const selectedTower: Tower | null = useMemo(
+        () => selectedTowerId !== null
+            ? (game.getTowers().find(t => t.instanceId === selectedTowerId) ?? null)
+            : null,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [selectedTowerId, snapshotRef.current.tick], // re-run whenever frame advances
+    );
 
-        // Convert screen coords to grid coords
+    // ─── Input handlers ───
+
+    const handleCanvasTap = useCallback((x: number, y: number) => {
+        const snapshot = snapshotRef.current;
+        if (snapshot.stateType === 'relicChoice') return;
+
         const gridX = Math.floor((x - offsetX) / cellSize);
         const gridY = Math.floor((y - offsetY) / cellSize);
 
-        if (gridX >= 0 && gridX < mapDef.gridWidth && gridY >= 0 && gridY < mapDef.gridHeight) {
-            // Check if there is a tower here
-            const existingTower = game.getTowers().find(t => t.position.x === gridX && t.position.y === gridY);
-
-            if (existingTower) {
-                // Select existing tower
-                setSelectedTower(existingTower);
-                setSelectedTowerType(null); // Clear placement selection
-            } else if (selectedTowerType && game.currentState.type === 'building') {
-                // Place new tower
-                game.processCommand({
-                    type: 'placeTower',
-                    towerType: selectedTowerType,
-                    gridX,
-                    gridY,
-                    tick: game.currentTick,
-                });
-                setSelectedTower(null);
-            } else {
-                // Deselect
-                setSelectedTower(null);
-            }
-        } else {
-            // Tapped outside grid
-            setSelectedTower(null);
+        if (gridX < 0 || gridX >= mapDef.gridWidth || gridY < 0 || gridY >= mapDef.gridHeight) {
+            setSelectedTowerId(null);
+            return;
         }
-    };
 
-    const handleUpgrade = (pathID: string) => {
+        const existing = snapshot.towers.find(
+            t => t.gridPosition.x === gridX && t.gridPosition.y === gridY,
+        );
+
+        if (existing) {
+            // Select placed tower — enter inspect mode
+            setSelectedTowerId(existing.id);
+            setSelectedTowerType('');
+        } else if (selectedTowerType && snapshot.stateType === 'building') {
+            // Place tower
+            game.processCommand({
+                type: 'placeTower',
+                towerType: selectedTowerType,
+                gridX,
+                gridY,
+                tick: game.currentTick,
+            });
+        } else {
+            setSelectedTowerId(null);
+        }
+    }, [offsetX, offsetY, cellSize, mapDef, selectedTowerType, game]);
+
+    const handleUpgrade = useCallback((pathID: string) => {
         if (!selectedTower) return;
         game.processCommand({
             type: 'upgradeTower',
@@ -105,14 +151,11 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
             upgradePath: pathID,
             tick: game.currentTick,
         });
-        // Deselect or update selection needed?
-        // The game entity will be replaced, so old Tower instance handles are stale.
-        // GameState emits 'towerPlaced', we could listen.
-        // For simple UI, just deserialize on next tick or close details.
-        setSelectedTower(null);
-    };
+        // Keep selection open — instanceId is preserved after upgrade so the
+        // next render will look up the upgraded tower automatically.
+    }, [selectedTower, game]);
 
-    const handleSell = () => {
+    const handleSell = useCallback(() => {
         if (!selectedTower) return;
         game.processCommand({
             type: 'sellTower',
@@ -120,32 +163,32 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
             gridY: selectedTower.position.y,
             tick: game.currentTick,
         });
-        setSelectedTower(null);
-    };
+        setSelectedTowerId(null);
+    }, [selectedTower, game]);
 
-    const handleRelicChoose = (index: number) => {
-        game.processCommand({
-            type: 'chooseRelic',
-            index,
-            tick: game.currentTick,
-        });
-    };
+    const handleRelicChoose = useCallback((index: number) => {
+        game.processCommand({ type: 'chooseRelic', index, tick: game.currentTick });
+    }, [game]);
 
-    const handleStartWave = () => {
-        if (game.currentState.type === 'building') {
+    const handleStartWave = useCallback(() => {
+        if (snapshotRef.current.stateType === 'building') {
             game.processCommand({ type: 'startWave', tick: game.currentTick });
         }
-    };
+    }, [game]);
+
+    // ─── Render ───
+
+    const snapshot = snapshotRef.current;
+    const isBuilding = snapshot.stateType === 'building';
+    const canvasHeight = height - 150;
 
     return (
         <View style={styles.container}>
-            {/* Game Canvas */}
+            {/* Game canvas */}
             <Pressable
-                onPress={(event) => {
-                    handleCanvasTap(event.nativeEvent.locationX, event.nativeEvent.locationY);
-                }}
+                onPress={(e) => handleCanvasTap(e.nativeEvent.locationX, e.nativeEvent.locationY)}
             >
-                <Canvas style={{ width, height: height - 150 }}>
+                <Canvas style={{ width, height: canvasHeight }}>
                     <MapRenderer
                         mapDef={mapDef}
                         cellSize={cellSize}
@@ -153,13 +196,14 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
                         offsetY={offsetY}
                     />
                     <TowerRenderer
-                        towers={towers}
+                        towers={snapshot.towers}
                         cellSize={cellSize}
                         offsetX={offsetX}
                         offsetY={offsetY}
+                        selectedTowerId={selectedTowerId}
                     />
                     <EnemyRenderer
-                        enemies={enemies}
+                        enemies={snapshot.enemies}
                         mapDef={mapDef}
                         cellSize={cellSize}
                         offsetX={offsetX}
@@ -168,61 +212,66 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
                 </Canvas>
             </Pressable>
 
-            {/* UI Overlay */}
+            {/* HUD */}
             <View style={styles.ui}>
                 <View style={styles.stats}>
-                    <Text style={styles.statText}>💰 {game.currentCoins}</Text>
-                    <Text style={styles.statText}>❤️ {game.currentLives}</Text>
-                    <Text style={styles.statText}>⏱️ {tick}</Text>
+                    <Text style={styles.statText}>💰 {snapshot.coins}</Text>
+                    <Text style={styles.statText}>❤️ {snapshot.lives}</Text>
+                    <Text style={styles.statText}>
+                        Wave {snapshot.currentWave + 1}/{snapshot.totalWaves}
+                    </Text>
                 </View>
 
                 <View style={styles.controls}>
-                    <TouchableOpacity
-                        style={[styles.towerButton, selectedTowerType === 'archer' && styles.selectedButton]}
-                        onPress={() => setSelectedTowerType('archer')}
-                    >
-                        <Text style={styles.buttonText}>Archer (100)</Text>
-                    </TouchableOpacity>
+                    {baseTowers.map(def => (
+                        <TouchableOpacity
+                            key={def.id}
+                            style={[
+                                styles.towerButton,
+                                selectedTowerType === def.id && styles.selectedButton,
+                                !isBuilding && styles.disabledButton,
+                            ]}
+                            onPress={() => {
+                                setSelectedTowerType(def.id);
+                                setSelectedTowerId(null);
+                            }}
+                            disabled={!isBuilding}
+                        >
+                            <Text style={styles.buttonText}>{def.name}</Text>
+                            <Text style={styles.costText}>{def.cost} 💰</Text>
+                        </TouchableOpacity>
+                    ))}
 
                     <TouchableOpacity
-                        style={[styles.towerButton, selectedTowerType === 'cannon' && styles.selectedButton]}
-                        onPress={() => setSelectedTowerType('cannon')}
-                    >
-                        <Text style={styles.buttonText}>Cannon (200)</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.waveButton}
+                        style={[styles.waveButton, !isBuilding && styles.waveButtonDisabled]}
                         onPress={handleStartWave}
-                        disabled={game.currentState.type !== 'building'}
+                        disabled={!isBuilding}
                     >
                         <Text style={styles.buttonText}>
-                            {game.currentState.type === 'building' ? 'Start Wave' : 'Wave Active'}
+                            {isBuilding ? 'Start Wave' : 'Wave Active'}
                         </Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
-            {/* Modals & Overlays */}
+            {/* Modals */}
             <RelicChoiceModal
-                visible={game.currentState.type === 'relicChoice' && !!game.currentRelicChoices}
+                visible={snapshot.stateType === 'relicChoice' && !!game.currentRelicChoices}
                 choices={game.currentRelicChoices || []}
                 onChoose={handleRelicChoose}
             />
 
-            {
-                selectedTower && (
-                    <TowerDetails
-                        tower={selectedTower!}
-                        definitions={definitions}
-                        currentCoins={game.currentCoins}
-                        onUpgrade={handleUpgrade}
-                        onSell={handleSell}
-                        onClose={() => setSelectedTower(null)}
-                    />
-                )
-            }
-        </View >
+            {selectedTower && (
+                <TowerDetails
+                    tower={selectedTower}
+                    definitions={definitions}
+                    currentCoins={snapshot.coins}
+                    onUpgrade={handleUpgrade}
+                    onSell={handleSell}
+                    onClose={() => setSelectedTowerId(null)}
+                />
+            )}
+        </View>
     );
 }
 
@@ -242,17 +291,17 @@ const styles = StyleSheet.create({
     },
     statText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
     },
     controls: {
         flexDirection: 'row',
-        gap: 8,
+        gap: 6,
     },
     towerButton: {
         flex: 1,
         backgroundColor: '#16f2b3',
-        padding: 12,
+        padding: 8,
         borderRadius: 8,
         alignItems: 'center',
     },
@@ -261,16 +310,29 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#16f2b3',
     },
+    disabledButton: {
+        opacity: 0.4,
+    },
     waveButton: {
         flex: 1,
         backgroundColor: '#ff6b6b',
-        padding: 12,
+        padding: 8,
         borderRadius: 8,
         alignItems: 'center',
+        justifyContent: 'center',
+    },
+    waveButtonDisabled: {
+        backgroundColor: '#883333',
+        opacity: 0.7,
     },
     buttonText: {
         color: '#fff',
         fontWeight: 'bold',
-        fontSize: 14,
+        fontSize: 12,
+    },
+    costText: {
+        color: '#ffffffcc',
+        fontSize: 11,
+        marginTop: 2,
     },
 });

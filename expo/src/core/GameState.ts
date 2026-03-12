@@ -196,6 +196,8 @@ export class GameState {
             gridPosition: t.position,
             kills: t.kills,
             totalDamage: t.totalDamage,
+            effectiveRange: t.effectiveRange,
+            canFire: t.canFire(),
         }));
 
         return {

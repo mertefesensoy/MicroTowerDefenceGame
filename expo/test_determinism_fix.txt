@@ -1,0 +1,44 @@
+
+> micro-tower-defence@1.0.0 test
+> jest
+
+PASS __tests__/core/RelicSystem.test.ts (6.07 s)
+PASS __tests__/core/DefinitionsLoader.test.ts (6.042 s)
+PASS __tests__/core/RunManager.test.ts (5.648 s)
+  ΓùÅ Console
+
+    console.warn
+      ΓÜá∩╕Å RunManager: Duplicate runSeed 999 detected ΓÇö skipping
+
+      64 |         if (this.lastRun && this.lastRun.runSeed === summary.runSeed) {
+      65 |             if (__DEV__) {
+    > 66 |                 console.warn(`ΓÜá∩╕Å RunManager: Duplicate runSeed ${summary.runSeed} detected ΓÇö skipping`);
+         |                         ^
+      67 |             }
+      68 |             return [];
+      69 |         }
+
+      at RunManager.warn (src/persistence/RunManager.ts:66:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at RunManager.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at RunManager.apply [as applyRun] (src/persistence/RunManager.ts:62:19)
+      at Object.applyRun (__tests__/core/RunManager.test.ts:47:39)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS __tests__/core/ProgressionSystem.test.ts (5.556 s)
+PASS __tests__/core/SeededRNG.test.ts (5.56 s)
+PASS __tests__/core/ProfileStore.test.ts (12.137 s)
+PASS __tests__/core/Victory.test.ts (12.405 s)
+PASS __tests__/core/CombatSystem.test.ts (12.402 s)
+PASS __tests__/core/GoldenSeed.test.ts (12.39 s)
+PASS __tests__/core/Determinism.test.ts (12.383 s)
+PASS __tests__/core/GameState.test.ts (12.418 s)
+
+Test Suites: 11 passed, 11 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        22.292 s
+Ran all test suites.

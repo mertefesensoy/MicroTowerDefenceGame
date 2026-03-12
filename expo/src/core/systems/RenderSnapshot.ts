@@ -24,6 +24,8 @@ export interface RenderTower {
     gridPosition: GridPosition;
     kills: number;
     totalDamage: number;
+    effectiveRange: number;
+    canFire: boolean;
 }
 
 /**

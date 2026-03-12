@@ -1,74 +1,71 @@
 // TowerRenderer.tsx
-// Renders towers with range indicators
+// Renders towers using RenderTower DTOs (no game-entity coupling)
 
 import { Circle, Group } from '@shopify/react-native-skia';
-import type { Tower } from '../core/entities/Tower';
+import type { RenderTower } from '../core/systems/RenderSnapshot';
 
 interface TowerRendererProps {
-    towers: Tower[];
+    towers: RenderTower[];
     cellSize: number;
     offsetX: number;
     offsetY: number;
-    selectedTower?: Tower;
+    selectedTowerId: number | null;
 }
 
-export function TowerRenderer({ towers, cellSize, offsetX, offsetY, selectedTower }: TowerRendererProps) {
+export function TowerRenderer({ towers, cellSize, offsetX, offsetY, selectedTowerId }: TowerRendererProps) {
     const getTowerColor = (typeID: string): string => {
         switch (typeID) {
-            case 'archer':
-                return '#16f2b3';
-            case 'cannon':
-                return '#ff6b6b';
-            default:
-                return '#888';
+            // Cannon family
+            case 'cannon': return '#ff6b6b';
+            case 'heavy':  return '#cc2222';
+            case 'rapid':  return '#ff9966';
+            // Frost family
+            case 'frost':       return '#00bfff';
+            case 'deep_freeze': return '#0066cc';
+            case 'wide_chill':  return '#88eeff';
+            // Bomb family
+            case 'bomb':    return '#ffcc00';
+            case 'napalm':  return '#ff8800';
+            case 'cluster': return '#ffee88';
+            default:        return '#888888';
         }
     };
 
     return (
         <>
             {towers.map((tower) => {
-                const cx = offsetX + tower.position.x * cellSize + cellSize / 2;
-                const cy = offsetY + tower.position.y * cellSize + cellSize / 2;
-                const isSelected = selectedTower?.instanceId === tower.instanceId;
+                const cx = offsetX + tower.gridPosition.x * cellSize + cellSize / 2;
+                const cy = offsetY + tower.gridPosition.y * cellSize + cellSize / 2;
+                const color = getTowerColor(tower.typeID);
+                const isSelected = tower.id === selectedTowerId;
 
                 return (
-                    <Group key={tower.instanceId}>
-                        {/* Range indicator (if selected) */}
+                    <Group key={tower.id}>
+                        {/* Range indicator when tower is selected */}
                         {isSelected && (
                             <Circle
                                 cx={cx}
                                 cy={cy}
                                 r={tower.effectiveRange * cellSize}
-                                color={getTowerColor(tower.typeID)}
+                                color={color}
                                 opacity={0.15}
                             />
                         )}
 
-                        {/* Tower base */}
-                        <Circle
-                            cx={cx}
-                            cy={cy}
-                            r={cellSize * 0.35}
-                            color={getTowerColor(tower.typeID)}
-                            opacity={0.3}
-                        />
+                        {/* Tower base (translucent halo) */}
+                        <Circle cx={cx} cy={cy} r={cellSize * 0.35} color={color} opacity={0.3} />
 
                         {/* Tower core */}
-                        <Circle
-                            cx={cx}
-                            cy={cy}
-                            r={cellSize * 0.25}
-                            color={getTowerColor(tower.typeID)}
-                        />
+                        <Circle cx={cx} cy={cy} r={cellSize * 0.25} color={color} />
 
-                        {/* Fire indicator */}
-                        {tower.canFire() && (
+                        {/* Ready-to-fire indicator dot */}
+                        {tower.canFire && (
                             <Circle
                                 cx={cx}
                                 cy={cy - cellSize * 0.15}
                                 r={cellSize * 0.08}
-                                color="#fff"
-                                opacity={0.8}
+                                color="#ffffff"
+                                opacity={0.85}
                             />
                         )}
                     </Group>

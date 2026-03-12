@@ -1,0 +1,46 @@
+
+> micro-tower-defence@1.0.0 test
+> jest ProfileStore.test.ts
+
+FAIL __tests__/core/ProfileStore.test.ts
+  ProfileStore
+    ΓêÜ should return default profile if no save exists (2 ms)
+    ΓêÜ should save and load profile (5 ms)
+    ΓêÜ should handle missing unlocks by reconciling with rules (1 ms)
+  ProfileStore Serialization Determinism
+    ΓêÜ should produce identical JSON for identical unlocks regardless of Set insertion order (1 ms)
+    ├ù should preserve unlock membership after round-trip save/load (4 ms)
+
+  ΓùÅ ProfileStore Serialization Determinism ΓÇ║ should preserve unlock membership after round-trip save/load
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 3
+
+      Array [
+    -   "item_a",
+    -   "item_b",
+    -   "item_c",
+    +   "map_fortress",
+    +   "relic_uncommon_pack",
+    +   "tower_sniper",
+      ]
+
+      122 |         // Verify the saved JSON has sorted unlocks
+      123 |         const parsed = JSON.parse(savedJson);
+    > 124 |         expect(parsed.profile.unlocks).toEqual(['item_a', 'item_b', 'item_c']);
+          |                                        ^
+      125 |
+      126 |         // Mock load to return the saved data
+      127 |         (AsyncStorage.getItem as jest.Mock).mockResolvedValue(savedJson);
+
+      at Object.toEqual (__tests__/core/ProfileStore.test.ts:124:40)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        0.687 s, estimated 1 s
+Ran all test suites matching /ProfileStore.test.ts/i.

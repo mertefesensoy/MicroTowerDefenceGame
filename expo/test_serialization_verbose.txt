@@ -1,0 +1,63 @@
+
+> micro-tower-defence@1.0.0 test
+> jest ProfileStore.test.ts --verbose
+
+FAIL __tests__/core/ProfileStore.test.ts
+  ProfileStore
+    ΓêÜ should return default profile if no save exists (4 ms)
+    ΓêÜ should save and load profile (8 ms)
+    ΓêÜ should handle missing unlocks by reconciling with rules (1 ms)
+  ProfileStore Serialization Determinism
+    ├ù should produce identical JSON for identical unlocks regardless of Set insertion order (9 ms)
+    ├ù should preserve unlock membership after round-trip save/load (3 ms)
+
+  ΓùÅ ProfileStore Serialization Determinism ΓÇ║ should produce identical JSON for identical unlocks regardless of Set insertion order
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 1
+
+    - Array [
+    -   "map_fortress",
+    -   "relic_uncommon_pack",
+    -   "tower_sniper",
+    - ]
+    + Array []
+
+       99 |         const parsedA = JSON.parse(jsonA!);
+      100 |         const unlocksArray = parsedA.profile.unlocks;
+    > 101 |         expect(unlocksArray).toEqual(['map_fortress', 'relic_uncommon_pack', 'tower_sniper']);
+          |                              ^
+      102 |
+      103 |         // Verify sorted order (deterministic comparator)
+      104 |         const sorted = [...unlocksArray].sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
+
+      at Object.toEqual (__tests__/core/ProfileStore.test.ts:101:30)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ΓùÅ ProfileStore Serialization Determinism ΓÇ║ should preserve unlock membership after round-trip save/load
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      122 |
+      123 |         // Verify all unlocks preserved (order doesn't matter for Set membership)
+    > 124 |         expect(loaded.unlocks.has('item_a')).toBe(true);
+          |                                              ^
+      125 |         expect(loaded.unlocks.has('item_b')).toBe(true);
+      126 |         expect(loaded.unlocks.has('item_c')).toBe(true);
+      127 |         expect(loaded.unlocks.size).toBe(3);
+
+      at Object.toBe (__tests__/core/ProfileStore.test.ts:124:46)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 3 passed, 5 total
+Snapshots:   0 total
+Time:        1.838 s, estimated 5 s
+Ran all test suites matching /ProfileStore.test.ts/i.

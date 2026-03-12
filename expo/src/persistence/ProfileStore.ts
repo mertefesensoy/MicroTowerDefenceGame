@@ -101,7 +101,11 @@ export class AsyncStorageProfileStore implements ProfileStoreInterface {
             profile: {
                 xp: profile.xp,
                 level: profile.level,
-                unlocks: Array.from(profile.unlocks),
+                // DETERMINISM: Sort unlocks to ensure stable JSON output
+                // regardless of Set insertion order across different runs
+                unlocks: Array.from(profile.unlocks).sort((a, b) =>
+                    a < b ? -1 : a > b ? 1 : 0
+                ),
             },
             lastRun,
             savedAt: new Date().toISOString(),

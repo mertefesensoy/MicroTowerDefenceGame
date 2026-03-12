@@ -1,0 +1,54 @@
+
+> micro-tower-defence@1.0.0 test
+> jest ProfileStore.test.ts
+
+FAIL __tests__/core/ProfileStore.test.ts
+  ProfileStore
+    ΓêÜ should return default profile if no save exists (2 ms)
+    ΓêÜ should save and load profile (5 ms)
+    ΓêÜ should handle missing unlocks by reconciling with rules
+  ProfileStore Serialization Determinism
+    ├ù should produce identical JSON for identical unlocks regardless of Set insertion order (1 ms)
+    ├ù should preserve unlock membership after round-trip save/load
+
+  ΓùÅ ProfileStore Serialization Determinism ΓÇ║ should produce identical JSON for identical unlocks regardless of Set insertion order
+
+    TypeError: _asyncStorage.default.clear is not a function
+
+      81 |
+      82 |         // Clear storage
+    > 83 |         await AsyncStorage.clear();
+         |                            ^
+      84 |
+      85 |         // Save profileA and capture JSON
+      86 |         await store.save(profileA, null);
+
+      at Object.clear (__tests__/core/ProfileStore.test.ts:83:28)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ΓùÅ ProfileStore Serialization Determinism ΓÇ║ should preserve unlock membership after round-trip save/load
+
+    TypeError: _asyncStorage.default.clear is not a function
+
+      115 |         };
+      116 |
+    > 117 |         await AsyncStorage.clear();
+          |                            ^
+      118 |         await store.save(original, null);
+      119 |
+      120 |         const { profile: loaded } = await store.load(rules);
+
+      at Object.clear (__tests__/core/ProfileStore.test.ts:117:28)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 3 passed, 5 total
+Snapshots:   0 total
+Time:        5.739 s, estimated 13 s
+Ran all test suites matching /ProfileStore.test.ts/i.
