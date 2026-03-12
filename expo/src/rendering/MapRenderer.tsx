@@ -11,9 +11,11 @@ interface MapRendererProps {
     cellSize: number;
     offsetX: number;
     offsetY: number;
+    /** Flash a cell red for invalid placement feedback */
+    invalidCell?: { x: number; y: number } | null;
 }
 
-export function MapRenderer({ mapDef, cellSize, offsetX, offsetY }: MapRendererProps) {
+export function MapRenderer({ mapDef, cellSize, offsetX, offsetY, invalidCell }: MapRendererProps) {
     // Build Skia path once — the map and cell size are stable during a run.
     // This prevents allocating a new path object on every frame (~60/s).
     const enemyPath = useMemo(() => {
@@ -93,6 +95,18 @@ export function MapRenderer({ mapDef, cellSize, offsetX, offsetY }: MapRendererP
                     opacity={0.6}
                 />
             ))}
+
+            {/* Invalid placement feedback — red flash */}
+            {invalidCell && (
+                <Rect
+                    x={offsetX + invalidCell.x * cellSize + 1}
+                    y={offsetY + invalidCell.y * cellSize + 1}
+                    width={cellSize - 2}
+                    height={cellSize - 2}
+                    color="#ff3333"
+                    opacity={0.4}
+                />
+            )}
         </>
     );
 }

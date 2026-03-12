@@ -48,7 +48,20 @@ export function TowerRenderer({ towers, cellSize, offsetX, offsetY, selectedTowe
                                 cy={cy}
                                 r={tower.effectiveRange * cellSize}
                                 color={color}
-                                opacity={0.15}
+                                opacity={0.12}
+                            />
+                        )}
+
+                        {/* Selection ring — bright stroke outline */}
+                        {isSelected && (
+                            <Circle
+                                cx={cx}
+                                cy={cy}
+                                r={cellSize * 0.42}
+                                color="#ffffff"
+                                style="stroke"
+                                strokeWidth={2.5}
+                                opacity={0.9}
                             />
                         )}
 

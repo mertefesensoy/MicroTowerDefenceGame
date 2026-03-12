@@ -7,52 +7,80 @@ interface TowerDetailsProps {
     tower: Tower;
     definitions: GameDefinitions;
     currentCoins: number;
+    isBuilding: boolean;
     onUpgrade: (pathID: string) => void;
     onSell: () => void;
     onClose: () => void;
 }
 
-export function TowerDetails({ tower, definitions, currentCoins, onUpgrade, onSell, onClose }: TowerDetailsProps) {
+export function TowerDetails({ tower, definitions, currentCoins, isBuilding, onUpgrade, onSell, onClose }: TowerDetailsProps) {
     const refundAmount = Math.floor(tower.baseDef.cost * 0.5);
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>{tower.baseDef.name}</Text>
-                <TouchableOpacity onPress={onClose}>
+                <TouchableOpacity onPress={onClose} style={styles.closeButtonWrapper}>
                     <Text style={styles.closeButton}>✕</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.stats}>
-                <Text style={styles.stat}>Damage: {(tower.baseDef.damage * tower.damageMultiplier).toFixed(1)}</Text>
-                <Text style={styles.stat}>Range: {(tower.baseDef.range * tower.rangeMultiplier).toFixed(1)}</Text>
-                <Text style={styles.stat}>Speed: {(tower.baseDef.fireRate * tower.fireRateMultiplier).toFixed(2)}/s</Text>
-                <Text style={styles.stat}>Kills: {tower.kills}</Text>
+                <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>DMG</Text>
+                    <Text style={styles.statValue}>{(tower.baseDef.damage * tower.damageMultiplier).toFixed(1)}</Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>RNG</Text>
+                    <Text style={styles.statValue}>{(tower.baseDef.range * tower.rangeMultiplier).toFixed(1)}</Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>SPD</Text>
+                    <Text style={styles.statValue}>{(tower.baseDef.fireRate * tower.fireRateMultiplier).toFixed(2)}/s</Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>KILLS</Text>
+                    <Text style={styles.statValue}>{tower.kills}</Text>
+                </View>
             </View>
 
             <View style={styles.upgrades}>
-                <Text style={styles.sectionTitle}>Upgrades</Text>
+                <Text style={styles.sectionTitle}>
+                    {isBuilding ? 'Upgrades' : 'Upgrades (between waves)'}
+                </Text>
                 <View style={styles.upgradeList}>
                     {tower.baseDef.upgradePaths.map(pathID => {
                         const upgradeDef = definitions.towers.tower(pathID);
                         if (!upgradeDef) return null;
 
-                        // Net cost logic: NewCost - 50% OldCost (current value)
-                        // Actually GameState implementation is: max(0, newCost - oldCost)
-                        // Let's match GameState logic.
                         const upgradeCost = Math.max(0, upgradeDef.cost - tower.baseDef.cost);
                         const canAfford = currentCoins >= upgradeCost;
+                        const canUpgrade = isBuilding && canAfford;
 
                         return (
                             <TouchableOpacity
                                 key={pathID}
-                                style={[styles.upgradeButton, !canAfford && styles.disabled]}
-                                onPress={() => canAfford && onUpgrade(pathID)}
-                                disabled={!canAfford}
+                                style={[
+                                    styles.upgradeButton,
+                                    !canUpgrade && styles.disabled,
+                                    !isBuilding && styles.lockedButton,
+                                ]}
+                                onPress={() => canUpgrade && onUpgrade(pathID)}
+                                disabled={!canUpgrade}
                             >
-                                <Text style={styles.upgradeName}>{upgradeDef.name}</Text>
-                                <Text style={styles.cost}>{upgradeCost} 💰</Text>
+                                <Text style={[styles.upgradeName, !canUpgrade && styles.disabledText]}>
+                                    {upgradeDef.name}
+                                </Text>
+                                <Text style={[
+                                    styles.cost,
+                                    !canUpgrade && styles.disabledText,
+                                    isBuilding && !canAfford && styles.costUnaffordable,
+                                ]}>
+                                    {upgradeCost} 💰
+                                </Text>
+                                {!isBuilding && (
+                                    <Text style={styles.lockedLabel}>🔒</Text>
+                                )}
                             </TouchableOpacity>
                         );
                     })}
@@ -63,8 +91,16 @@ export function TowerDetails({ tower, definitions, currentCoins, onUpgrade, onSe
             </View>
 
             <View style={styles.actions}>
-                <TouchableOpacity style={styles.sellButton} onPress={onSell}>
-                    <Text style={styles.sellText}>Sell (+{refundAmount} 💰)</Text>
+                <TouchableOpacity
+                    style={[styles.sellButton, !isBuilding && styles.sellButtonDisabled]}
+                    onPress={isBuilding ? onSell : undefined}
+                    disabled={!isBuilding}
+                >
+                    <Text style={[styles.sellText, !isBuilding && styles.disabledText]}>
+                        {isBuilding
+                            ? `Sell (+${refundAmount} 💰)`
+                            : `Sell 🔒 (between waves)`}
+                    </Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -81,47 +117,70 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
         padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#333',
+        borderTopWidth: 2,
+        borderTopColor: '#16f2b3',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12,
     },
     title: {
         fontSize: 20,
         fontWeight: 'bold',
         color: '#fff',
     },
-    closeButton: {
-        fontSize: 24,
-        color: '#888',
-        padding: 4,
+    closeButtonWrapper: {
+        minWidth: 44,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
+    closeButton: {
+        fontSize: 22,
+        color: '#888',
+    },
+    // ─── Stats Grid ───
     stats: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 12,
-        marginBottom: 16,
-        paddingBottom: 16,
+        gap: 8,
+        marginBottom: 12,
+        paddingBottom: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#333',
     },
-    stat: {
-        color: '#ccc',
-        fontSize: 14,
-        width: '45%',
+    statItem: {
+        flex: 1,
+        backgroundColor: '#0f0f1e',
+        borderRadius: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 4,
+        alignItems: 'center',
     },
+    statLabel: {
+        color: '#888',
+        fontSize: 10,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
+        marginBottom: 2,
+    },
+    statValue: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    // ─── Upgrades ───
     upgrades: {
-        marginBottom: 16,
+        marginBottom: 12,
     },
     sectionTitle: {
-        color: '#fff',
-        fontSize: 16,
+        color: '#aaa',
+        fontSize: 13,
         fontWeight: 'bold',
-        marginBottom: 8,
+        marginBottom: 6,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     upgradeList: {
         flexDirection: 'row',
@@ -130,13 +189,20 @@ const styles = StyleSheet.create({
     upgradeButton: {
         flex: 1,
         backgroundColor: '#16f2b3',
-        padding: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 8,
         borderRadius: 8,
         alignItems: 'center',
+        minHeight: 48,
+        justifyContent: 'center',
     },
     disabled: {
         backgroundColor: '#333',
-        opacity: 0.7,
+        opacity: 0.8,
+    },
+    lockedButton: {
+        backgroundColor: '#2a2a3e',
+        opacity: 0.6,
     },
     upgradeName: {
         color: '#000',
@@ -147,23 +213,40 @@ const styles = StyleSheet.create({
         color: '#000',
         fontSize: 12,
     },
+    costUnaffordable: {
+        color: '#ff4444',
+    },
+    disabledText: {
+        color: '#888',
+    },
+    lockedLabel: {
+        fontSize: 10,
+        marginTop: 2,
+    },
     noUpgrades: {
         color: '#666',
         fontStyle: 'italic',
     },
+    // ─── Sell ───
     actions: {
         alignItems: 'center',
     },
     sellButton: {
-        padding: 12,
+        paddingVertical: 12,
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#ff6b6b',
         width: '100%',
         alignItems: 'center',
+        minHeight: 44,
+        justifyContent: 'center',
+    },
+    sellButtonDisabled: {
+        borderColor: '#555',
     },
     sellText: {
         color: '#ff6b6b',
         fontWeight: 'bold',
+        fontSize: 14,
     },
 });
