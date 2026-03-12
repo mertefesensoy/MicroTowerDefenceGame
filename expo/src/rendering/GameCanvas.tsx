@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Pressable, useWindowDimensions, AppState, AppStateStatus } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Pressable, useWindowDimensions, AppState, AppStateStatus, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Canvas } from '@shopify/react-native-skia';
 import { GameState } from '../core/GameState';
@@ -59,12 +59,15 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
     // Map layout — stable for the lifetime of this component
     const mapDef = useMemo(() => definitions.maps.map('default')!, [definitions]);
 
+    // Animation for low lives
+    const heartbeatAnim = useRef(new Animated.Value(1)).current;
+
     // Responsive layout: account for safe areas and HUD height
     const HUD_HEIGHT = 160; // approximate height of bottom panel
-    const canvasHeight = height - HUD_HEIGHT - insets.bottom;
+    const canvasHeight = height - HUD_HEIGHT - insets.bottom - insets.top;
     const cellSize = Math.min(width - 16, canvasHeight - 60) / Math.max(mapDef.gridWidth, mapDef.gridHeight);
     const offsetX = (width - mapDef.gridWidth * cellSize) / 2;
-    const offsetY = 44; // space for phase banner
+    const offsetY = 44 + insets.top; // space for phase banner + safe area top
 
     // Base tower defs for placement buttons — derived from definitions, not hardcoded
     const baseTowers = useMemo(
@@ -85,6 +88,23 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
         });
         return () => sub.remove();
     }, []);
+
+    // ─── Low Lives Heartbeat Animation ───
+    useEffect(() => {
+        if (snapshotRef.current.lives <= 5 && snapshotRef.current.lives > 0) {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(heartbeatAnim, { toValue: 1.3, duration: 200, useNativeDriver: true }),
+                    Animated.timing(heartbeatAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+                    Animated.timing(heartbeatAnim, { toValue: 1.1, duration: 150, useNativeDriver: true }),
+                    Animated.timing(heartbeatAnim, { toValue: 1, duration: 450, useNativeDriver: true }),
+                ])
+            ).start();
+        } else {
+            heartbeatAnim.stopAnimation();
+            heartbeatAnim.setValue(1);
+        }
+    }, [snapshotRef.current.lives, heartbeatAnim]);
 
     // ─── Game Loop (requestAnimationFrame + fixed-timestep accumulator) ───
     useEffect(() => {
@@ -113,7 +133,8 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
 
                     if (snapshotRef.current.stateType === 'gameOver') {
                         gameEndedRef.current = true;
-                        setTimeout(() => onGameEnd(game.makeRunSummary()), 500);
+                        // Delay jumping to summary by 3 seconds to let them see "GAME OVER"
+                        setTimeout(() => onGameEnd(game.makeRunSummary()), 3000);
                         break;
                     }
                 }
@@ -262,13 +283,14 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
     return (
         <View style={styles.container}>
             {/* Phase Banner */}
-            <View style={[styles.phaseBanner, isBuilding ? styles.phaseBannerBuilding : styles.phaseBannerWave]}>
+            <View style={[styles.phaseBanner, isBuilding ? styles.phaseBannerBuilding : styles.phaseBannerWave, { paddingTop: insets.top + 6 }]}>
                 <Text style={styles.phaseBannerText}>{phaseBannerText}</Text>
             </View>
 
             {/* Game canvas */}
             <Pressable
                 onPress={(e) => handleCanvasTap(e.nativeEvent.locationX, e.nativeEvent.locationY)}
+                disabled={snapshot.stateType === 'gameOver'}
             >
                 <Canvas style={{ width, height: canvasHeight }}>
                     <MapRenderer
@@ -299,9 +321,13 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
             <View style={[styles.ui, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <View style={styles.stats}>
                     <Text style={styles.statText}>💰 {snapshot.coins}</Text>
-                    <Text style={[styles.statText, livesLow && styles.statTextDanger]}>
+                    <Animated.Text style={[
+                        styles.statText,
+                        livesLow && styles.statTextDanger,
+                        livesLow && { transform: [{ scale: heartbeatAnim }] }
+                    ]}>
                         ❤️ {snapshot.lives}
-                    </Text>
+                    </Animated.Text>
                 </View>
 
                 <View style={styles.controls}>
@@ -363,6 +389,18 @@ export function GameCanvas({ definitions, runSeed, onGameEnd }: GameCanvasProps)
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {/* Game Over Overlay */}
+            {snapshot.stateType === 'gameOver' && (
+                <View style={styles.gameOverOverlay}>
+                    <View style={styles.gameOverBox}>
+                        <Text style={styles.gameOverTitle}>💀 GAME OVER</Text>
+                        <Text style={styles.gameOverSubtitle}>
+                            Survived {snapshot.currentWave} waves
+                        </Text>
+                    </View>
+                </View>
+            )}
 
             {/* Pause Overlay */}
             {paused && (
@@ -529,7 +567,7 @@ const styles = StyleSheet.create({
     controlButtonTextActive: {
         color: '#0f0f1e',
     },
-    // ─── Pause Overlay ───
+    // ─── Overlays ───
     pauseOverlay: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(0,0,0,0.7)',
@@ -563,5 +601,32 @@ const styles = StyleSheet.create({
         color: '#0f0f1e',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    gameOverOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(50,0,0,0.85)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 100,
+    },
+    gameOverBox: {
+        backgroundColor: '#1a0000',
+        borderRadius: 16,
+        paddingVertical: 40,
+        paddingHorizontal: 48,
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#ff4444',
+    },
+    gameOverTitle: {
+        color: '#ff4444',
+        fontSize: 32,
+        fontWeight: 'bold',
+        marginBottom: 12,
+        letterSpacing: 3,
+    },
+    gameOverSubtitle: {
+        color: '#fff',
+        fontSize: 18,
     },
 });
